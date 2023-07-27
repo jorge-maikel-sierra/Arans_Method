@@ -152,6 +152,83 @@ function trp_do_shortcode($content){
     return do_shortcode(stripcslashes($content));
 }
 
+/**
+ * Compatibility with Woocommerce Print Products
+ *
+ * @param $bool
+ * @param $output
+ * @return bool|mixed
+ */
+
+add_filter( 'trp_skip_gettext_processing', 'trp_woo_strip_gettext_from_print_products' );
+
+function trp_woo_strip_gettext_from_print_products( $bool ){
+    if ( isset( $_REQUEST['print-products'] ) && $_REQUEST['print-products'] == 'pdf' && class_exists('\WooCommerce_Print_Products') ) {
+        return true;
+    }
+    return $bool;
+}
+
+
+add_filter('trp_stop_translating_page', 'trp_woo_pdf_print_products', 10, 2);
+
+function trp_woo_pdf_print_products( $bool, $output ){
+    if ( isset( $_REQUEST['print-products'] ) && $_REQUEST['print-products'] == 'pdf' && class_exists('\WooCommerce_Print_Products') ) {
+        return true;
+    }
+    return $bool;
+}
+
+/**
+ * DK PDF compatibility
+ *
+ * The DK PDF plugin seems to not work at all. Even when TranslatePress is deactivated, there are critical errors and notices in debug.log
+ */
+
+add_filter( 'trp_skip_gettext_processing', 'trp_dk_pdf_strip_gettext_from_pdf' );
+
+function trp_dk_pdf_strip_gettext_from_pdf( $bool ){
+
+    if ( isset( $_GET['pdf'] ) && class_exists( 'DKPDF' ) ){
+        return true;
+    }
+
+    return $bool;
+}
+
+
+add_filter('trp_stop_translating_page', 'trp_do_not_translate_dk_pdf', 10, 2);
+function trp_do_not_translate_dk_pdf($translate, $output){
+
+    if ( isset( $_GET['pdf'] ) && class_exists( 'DKPDF' ) ){
+        return true;
+    }
+
+    return $translate;
+}
+
+
+/**
+ * Compatibility with Invoices for WooCommerce
+ * Do not translate url's like this as it brakes them because they are PDF's: https://ro.wordpress.org/plugins/woocommerce-pdf-invoices/
+ */
+
+add_filter( 'trp_skip_gettext_processing', 'trp_invoices_for_woocommerce_strip_gettext_from_pdf', 10, 4 );
+function trp_invoices_for_woocommerce_strip_gettext_from_pdf( $bool, $translation, $text, $domain ){
+
+    if ( isset( $_GET['wc-ajax'] ) && $_GET['wc-ajax'] == "checkout" && class_exists( '\BEWPI_Invoice' ) && ((trim( $domain ) === 'woocommerce-pdf-invoice') || ( $text == 'Cash on delivery' && trim($domain) == 'woocommerce') ) ) {
+        return true;
+    }
+    return $bool;
+}
+
+add_filter('trp_stop_translating_page', 'trp_do_not_translate_pdf_param', 10, 2);
+function trp_do_not_translate_pdf_param($translate, $output){
+    if ( isset( $_GET['bewpi_action'] ) && class_exists( '\BEWPI_Invoice' ) ){
+        return true;
+    }
+    return $translate;
+}
 
 /**
  * Compatibility with WooCommerce PDF Invoices & Packing Slips
@@ -218,6 +295,26 @@ function trp_woocommerce_pdf_catalog_compatibility_dont_translate_pdf( $bool, $o
 	return $bool;
 }
 
+/**
+ *  Compatibility with YITH WooCommerce
+ */
+
+add_filter( 'trp_skip_gettext_processing', 'trp_woo_strip_gettext_from_yith_pdf', 10, 4 );
+function trp_woo_strip_gettext_from_yith_pdf( $bool, $translation, $text, $domain ){
+    if ( isset( $_GET['wc-ajax'] ) && $_GET['wc-ajax'] == 'checkout' && class_exists( 'YITH_Checkout_Addon' ) && ((trim( $domain ) === 'yith-woocommerce-pdf-invoice') || ( $text == 'N/A' && trim($domain) == 'woocommerce') ) ){
+        return true;
+    }
+    return $bool;
+}
+
+add_filter( 'trp_stop_translating_page', 'trp_woo_pdf_invoices_compatibility_dont_translate_pdf', 10, 2 );
+function trp_woo_pdf_invoices_compatibility_dont_translate_pdf( $bool, $output ){
+    if ( isset( $_REQUEST['type'] ) && $_REQUEST['type'] == 'proforma' && class_exists( 'YITH_Checkout_Addon' ) ) {
+        return true;
+    }
+    return $bool;
+
+}
 
 /**
  * Compatibility with WooCommerce order notes
@@ -1708,18 +1805,98 @@ function trp_remove_divi_locale_filter($lang){
     remove_filter( 'locale', 'et_divi_maybe_change_frontend_locale' );
     return $lang;
 }
+
+/**
+ * This function, checks if the Divi plugin is not installed first.
+ * If it's not installed, it returns the original locale.
+ * If it is installed, it will then access the theme options and check if the 'divi_disable_translations' is found in the cache.
+ * If the value is not found in the cache, it retrieves it from the database using get_option('et_divi').
+ * If the value retrieved from the database is also false, it sets it to 'not_set' in the cache.
+ * Then, it checks if the value of theme_options is 'not_set'. If it is, it returns the input locale without making any changes.
+ * If it is, it returns 'en_US', otherwise it returns the original locale.
+**/
 function trp_et_divi_maybe_change_frontend_locale( $locale ) {
+    if ( !defined( 'ET_CORE_PATH' ) ) {
+        return $locale;
+    }
     $cache_key = 'et_divi_option';
     $theme_options = wp_cache_get( $cache_key );
-    $option_name   = 'divi_disable_translations';
-    if (false === $theme_options){
+    $option_name = 'divi_disable_translations';
+    if (false === $theme_options) {
         $theme_options = get_option( 'et_divi' );
+        if ( false === $theme_options ) {
+            $theme_options = 'not_set';
+        }
         wp_cache_set( $cache_key, $theme_options );
     }
-    $disable_translations = isset ( $theme_options[ $option_name ] ) ? $theme_options[ $option_name ] : false;
-    if ( 'on' === $disable_translations ) {
+
+    if ( 'not_set' === $theme_options ) {
+        return $locale;
+    }
+
+    if ( !isset( $theme_options[ $option_name ] ) ) {
+        return $locale;
+    }
+
+    if ( 'on' === $theme_options[ $option_name ] ) {
         return 'en_US';
     }
+
     return $locale;
 }
 add_filter( 'locale', 'trp_et_divi_maybe_change_frontend_locale' );
+
+/*
+ * Register old advanced settings if they are checked
+ */
+add_action('admin_init', 'trp_register_old_advanced_settings');
+
+function trp_register_old_advanced_settings( $bool )
+{
+
+    $option = get_option('trp_advanced_settings', true);
+    if (isset($option['fix_broken_html']) && $option['fix_broken_html'] === 'yes') {
+
+        add_filter('trp_register_advanced_settings', 'trp_register_fix_broken_html', 50);
+    }
+}
+
+add_filter('trp_ald_popup_options_array', 'trp_keep_no_popup_setting_for_redirect_directly', 10, 1);
+
+function trp_keep_no_popup_setting_for_redirect_directly($array_popup_options){
+    $option_ald = get_option('trp_ald_settings', true);
+    if (isset($option_ald['popup_option']) && $option_ald['popup_option'] !== 'no_popup' && version_compare(TRP_IN_ALD_PLUGIN_VERSION, '1.1', '>=') ) {
+        unset($array_popup_options['no_popup']);
+    }
+    return $array_popup_options;
+}
+
+/**
+ * Prevent trp-sortable-languages.js script from running
+ *
+ * We have merged the code from trp-sortable-languages.js in trp-back-end-script.js in TP ver. 2.5.3 but we still need trp-sortable-languages for backwards compatibility
+ * If the version of TranslatePress is at least 2.5.3, prevent the trp-sortable-languages.js script from running
+ *
+ */
+add_action( 'trp_before_running_hooks', 'trpc_prevent_sortable_script_from_loading' );
+function trpc_prevent_sortable_script_from_loading( $trp_loader ){
+    if ( version_compare(TRP_PLUGIN_VERSION, '2.5.4', '>=' ) ) {
+        $trp_loader->remove_hook( 'admin_enqueue_scripts', 'enqueue_sortable_language_script' );
+    }
+}
+
+add_filter('trp_advanced_tab_add_element', 'trp_compatibility_for_adl_127_version', 20);
+function trp_compatibility_for_adl_127_version( $settings ){
+    foreach ( $settings as $key => $setting ) {
+        if ( $setting['name'] === 'automatic_user_language_detection' && !isset( $setting['id'] ) ) {
+            $settings[$key]['id'] = 'ald_settings';
+        }
+    }
+    return $settings;
+}
+
+add_action( 'before_woocommerce_init', function() {
+    if ( class_exists( \Automattic\WooCommerce\Utilities\FeaturesUtil::class ) ) {
+        \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility( 'custom_order_tables', TRP_PLUGIN_DIR . 'index.php', true );
+    }
+} );

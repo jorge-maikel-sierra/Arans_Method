@@ -31,6 +31,8 @@ class TRP_Machine_Translator {
         $this->machine_translation_codes = $this->trp_languages->get_iso_codes($this->settings['translation-languages']);
         add_filter( 'trp_exclude_words_from_automatic_translation', array( $this, 'sort_exclude_words_from_automatic_translation_array' ), 99999, 1 );
         add_filter( 'trp_exclude_words_from_automatic_translation', array( $this, 'exclude_special_symbol_from_translation' ), 9999, 2 );
+
+        add_filter('trp_add_google_v2_supported_languages_to_the_array', array( $this, 'add_google_v2_supported_languages_that_are_not_returned_by_the_post_response'), 10, 1);
     }
 
     /**
@@ -76,7 +78,9 @@ class TRP_Machine_Translator {
                 $data['trp_mt_supported_languages'][ $this->settings['trp_machine_translation_settings']['translation-engine'] ] = array( 'languages' => array() );
             }
 
-            $data['trp_mt_supported_languages'][$this->settings['trp_machine_translation_settings']['translation-engine']]['languages'] = $this->get_supported_languages();
+            if ( isset($this->settings['trp_machine_translation_settings']['google-translate-key'])) {
+                $data['trp_mt_supported_languages'][ $this->settings['trp_machine_translation_settings']['translation-engine'] ]['languages'] = $this->get_supported_languages();
+            }
             if (method_exists($this, 'check_formality')) {
                 $data['trp_mt_supported_languages'][ $this->settings['trp_machine_translation_settings']['translation-engine'] ]['formality-supported-languages'] = $this->check_formality();
             }
