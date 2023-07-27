@@ -7,7 +7,7 @@ See wp-cache.php for author details.
 
 $wp_cache_home_path = '/';
 $wp_cache_slash_check = 1;
-$cache_page_secret = 'ad8f81a0226fae21caaf4dec69310634';
+$cache_page_secret = 'b8b5dee9a5be81211a290e14e38a1585';
 $cache_time_interval = 600;
 if ( ! defined('WPCACHEHOME') )
 	define( 'WPCACHEHOME', WP_CONTENT_DIR . "/plugins/wp-super-cache/" );
