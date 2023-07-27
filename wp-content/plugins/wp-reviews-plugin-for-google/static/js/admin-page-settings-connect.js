@@ -54,7 +54,10 @@ jQuery(document).ready(function($) {
 			else if(Trustindex_Connect.form.data('platform') == 'amazon')
 			{
 				valid = (
-					!(page_id.indexOf("stores/") > -1
+					!(
+					page_id.search(/stores\/[^\/]+\/page/) > -1
+					||page_id.search(/stores\/page/) > -1
+					|| page_id.search(/stores\/[^\/]+\/[^\/]+\/page/) > -1
 					|| page_id.indexOf("account/") > -1
 					|| (page_id.indexOf("gp/") > -1 && page_id.indexOf("gp/product/") == -1)
 					|| page_id.search(/\-\/[^\/]{2}\/[^\/]{2}$/) > -1
@@ -122,7 +125,7 @@ jQuery(document).ready(function($) {
 			return true;
 		},
 		page_id_separator: '|',
-		async_request: function(callback) {
+		async_request: function(callback, btn) {
 			// get url params
 			let params = new URLSearchParams({
 				type: 'google',
@@ -138,27 +141,52 @@ jQuery(document).ready(function($) {
 			$('#ti-connect-info').fadeIn();
 
 			// open window
-			let ti_window = window.open('https://admin.trustindex.io/source/wordpressPageRequest?' + params.toString(), 'trustindex', 'width=1000,height=1000,menubar=0');
+			let ti_window = window.open('https://admin.trustindex.io/source/wordpressPageRequest?' + params.toString(), 'trustindex', 'width=850,height=850,menubar=0' + popupCenter(850, 850));
 
-			// wait for process complete
-			window.addEventListener('message', function(event) {
-				if(event.origin.startsWith('https://admin.trustindex.io/'.replace(/\/$/,'')) && event.data.success)
+			// popup close interval
+			let noChangeBtnLoading = false;
+			let timer = setInterval(function() {
+				if(ti_window.closed)
 				{
-					ti_window.close();
-
 					$('#ti-connect-info').hide();
 
-					callback($('#ti-noreg-connect-token').val(), event.data.request_id, typeof event.data.manual_download != 'undefined' && event.data.manual_download ? 1 : 0, event.data.place || null);
+					if(btn && !noChangeBtnLoading)
+					{
+						btn.removeClass('btn-loading');
+					}
+
+					clearInterval(timer);
 				}
-				if(event.origin.startsWith('https://admin.trustindex.io/'.replace(/\/$/,'')) && !event.data.success)
+			}, 1000);
+
+			// wait for process complete
+			jQuery(window).one('message', function(event) {
+				if(ti_window == event.originalEvent.source && event.originalEvent.origin.startsWith('https://admin.trustindex.io/'.replace(/\/$/,'')))
 				{
 					ti_window.close();
 
-					// reset connect form, with invalid input message
-					Trustindex_Connect.form.find(".ti-selected-source").hide();
-					Trustindex_Connect.button.removeClass("btn-disabled");
-					Trustindex_Connect.box.html("<span>" + Trustindex_Connect.box.data("errortext") + "</span>");
-					Trustindex_Connect.box.show();
+					let data = event.originalEvent.data || {};
+
+					if(data.success)
+					{
+						noChangeBtnLoading = true;
+						callback($('#ti-noreg-connect-token').val(), data.request_id, typeof data.manual_download != 'undefined' && data.manual_download ? 1 : 0, data.place || null);
+					}
+					else
+					{
+						$('#ti-connect-info').hide();
+
+						if(btn)
+						{
+							btn.removeClass('btn-loading');
+						}
+
+						// reset connect form, with invalid input message
+						Trustindex_Connect.form.find(".ti-selected-source").hide();
+						Trustindex_Connect.button.removeClass("btn-disabled");
+						Trustindex_Connect.box.html("<span>" + Trustindex_Connect.box.data("errortext") + "</span>");
+						Trustindex_Connect.box.show();
+					}
 				}
 			});
 		}
@@ -177,10 +205,7 @@ jQuery(document).ready(function($) {
 		// change button
 		let btn = $(this);
 
-		btn.css('pointer-events', 'none');
-		btn.addClass('btn-default').removeClass('btn-primary');
-		btn.blur();
-		TI_manage_dots(btn);
+		btn.addClass('btn-loading').blur();
 
 		Trustindex_Connect.button.css('pointer-events', 'none');
 
@@ -203,10 +228,7 @@ jQuery(document).ready(function($) {
 	$('#trustindex-plugin-settings-page .btn-refresh').click(function(event) {
 		let btn = jQuery(this);
 
-		btn.css('pointer-events', 'none');
-		btn.addClass('btn-default').removeClass('btn-primary');
-		btn.blur();
-		TI_manage_dots(btn);
+		btn.addClass('btn-loading').blur();
 
 		jQuery('#trustindex-plugin-settings-page .btn').css('pointer-events', 'none');
 	});
@@ -220,7 +242,10 @@ jQuery(document).ready(function($) {
 			{
 				$.ajax({
 					type: "POST",
-					data: { review_download_timestamp: place.timestamp }
+					data: {
+						page_details: JSON.stringify(place),
+						review_download_timestamp: place.timestamp
+					}
 				}).always(function(r) {
 					location.reload();
 				});
@@ -238,7 +263,7 @@ jQuery(document).ready(function($) {
 					location.reload();
 				});
 			}
-		});
+		}, $(this));
 	});
 
 	// manual download
@@ -246,10 +271,7 @@ jQuery(document).ready(function($) {
 		event.preventDefault();
 
 		let btn = $(this);
-
-		btn.blur().addClass('btn-disabled');
-
-		TI_manage_dots(btn);
+		btn.addClass('btn-loading').blur();
 
 		$.ajax({
 			url: location.search.replace(/&tab=[^&]+/, '&tab=setup_no_reg'),
@@ -259,7 +281,7 @@ jQuery(document).ready(function($) {
 				location.reload();
 			},
 			error: function() {
-				btn.restore();
+				btn.removeClass('btn-loading');
 				btn.addClass('show-tooltip');
 			}
 		});

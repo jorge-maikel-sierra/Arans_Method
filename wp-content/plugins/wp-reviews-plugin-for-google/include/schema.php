@@ -9,6 +9,8 @@ CREATE TABLE ". $this->get_tablename('reviews') ." (
  `rating` DECIMAL(3,1),
  `highlight` VARCHAR(11),
  `date` DATE,
+ `reviewId` TEXT,
+ `reply` TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
  PRIMARY KEY (`id`)
 )
 "

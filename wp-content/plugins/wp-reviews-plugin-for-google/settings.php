@@ -66,7 +66,7 @@ $tabs[ TrustindexPlugin_google::___("Free Widget Configurator") ] = "setup_no_re
 }
 if($trustindex_pm_google->is_noreg_linked())
 {
-$tabs[ TrustindexPlugin_google::___("My Reviews") ] = "my_reviews";
+$tabs[ TrustindexPlugin_google::___("Reply with ChatGPT") ] = "my_reviews";
 }
 $tabs[ TrustindexPlugin_google::___('Get Reviews') ] = "get_reviews";
 $tabs[ TrustindexPlugin_google::___('Rate Us') ] = "rate";
@@ -75,9 +75,15 @@ if(!$trustindex_pm_google->is_trustindex_connected())
 $tabs[ TrustindexPlugin_google::___('Get more Features') ] = "setup_trustindex";
 $tabs[ TrustindexPlugin_google::___('Log In') ] = "setup_trustindex_join";
 }
+$tabs[ TrustindexPlugin_google::___('Feature request') ] = "feature_request";
 $tabs[ TrustindexPlugin_google::___('Troubleshooting') ] = "troubleshooting";
 $selected_tab = isset($_GET['tab']) ? sanitize_text_field($_GET['tab']) : null;
 $subtabs = null;
+$new_badge_tabs = [];
+if(get_option($trustindex_pm_google->get_option_name('widget-setted-up'), 0) && !get_option($trustindex_pm_google->get_option_name('reply-generated'), 0))
+{
+$new_badge_tabs []= 'my_reviews';
+}
 $found = false;
 foreach($tabs as $tab)
 {
@@ -271,7 +277,7 @@ loaded_count++;
 <strong><?php echo $proxy_check; ?></strong><br /><br />
 <?php echo TrustindexPlugin_google::___("Therefore, our plugin might not work properly. Please, contact your hosting support, they can resolve this easily."); ?>
 </p>
-<a href="?page=<?php echo esc_attr($_GET['page']); ?>&tab=<?php echo esc_attr($_GET['tab']); ?>&test_proxy" class="btn-text btn-refresh" data-loading-text="<?php echo TrustindexPlugin_google::___("Loading") ;?>"><?php echo TrustindexPlugin_google::___("Test again") ;?></a>
+<a href="?page=<?php echo esc_attr($_GET['page']); ?>&tab=<?php echo esc_attr($_GET['tab']); ?>&test_proxy" class="btn-text btn-refresh"><?php echo TrustindexPlugin_google::___("Test again") ;?></a>
 </div>
 <?php endif; ?>
 <div class="nav-tab-wrapper">
@@ -291,9 +297,14 @@ $subtabs = $tab;
 ?>
 <a
 id="link-tab-<?php echo esc_attr($action); ?>"
-class="nav-tab<?php if($is_active): ?> nav-tab-active<?php endif; ?><?php if($tab == 'troubleshooting'): ?> nav-tab-right<?php endif; ?>"
+class="nav-tab<?php if($is_active): ?> nav-tab-active<?php endif; ?><?php if($tab == 'troubleshooting' || $tab == 'feature_request'): ?> nav-tab-right<?php endif; ?>"
 href="<?php echo admin_url('admin.php?page='.$trustindex_pm_google->get_plugin_slug().'/settings.php&tab='. esc_attr($action)); ?>"
-><?php echo esc_html($tab_name); ?></a>
+>
+<?php echo esc_html($tab_name); ?>
+<?php if(in_array($tab, $new_badge_tabs)): ?>
+<span class="ti-new-badge"><?php echo TrustindexPlugin_google::___('new'); ?></span>
+<?php endif; ?>
+</a>
 <?php endforeach; ?>
 </div>
 <?php if($subtabs): ?>

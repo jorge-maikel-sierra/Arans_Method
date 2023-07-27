@@ -81,7 +81,9 @@ $wpdb->insert($table_name, [
 'user_photo' => $row['reviewer']['avatar_url'],
 'text' => $row['text'],
 'rating' => $row['rating'] ? $row['rating'] : 5,
-'date' => substr($date, 0, 10)
+'date' => substr($date, 0, 10),
+'reviewId' => isset($row['id']) ? $row['id'] : null,
+'reply' => isset($row['reply']) ? $row['reply'] : ""
 ]);
 }
 if($trustindex_pm_google->shortname == 'facebook' || count($reviews) == $page_details['rating_number'] || count($reviews) == 10)
@@ -408,8 +410,7 @@ exit;
 if(isset($_GET['setup_widget']))
 {
 update_option( $trustindex_pm_google->get_option_name('widget-setted-up'), 1, false );
-header('Location: admin.php?page=' . sanitize_text_field($_GET['page']) .'&tab=setup_no_reg');
-exit;
+$widget_setted_up = 1;
 }
 $current_step = isset($_GET['step']) ? intval(sanitize_text_field($_GET['step'])) : 0;
 if($current_step == 3 && in_array($style_id, [ 17, 21, 52, 53 ]))

@@ -9,6 +9,28 @@ String.prototype.ucfirst = function() {
 	return this.charAt(0).toUpperCase() + this.slice(1)
 }
 
+function popupCenter(w, h)
+{
+	let dleft = window.screenLeft !== undefined ? window.screenLeft : window.screenX;
+	let dtop = window.screenTop !== undefined ? window.screenTop : window.screenY;
+
+	let width = window.innerWidth ? window.innerWidth : document.documentElement.clientWidth ? document.documentElement.clientWidth : screen.width;
+	let height = window.innerHeight ? window.innerHeight : document.documentElement.clientHeight ? document.documentElement.clientHeight : screen.height;
+
+	let left = parseInt((width - w) / 2 + dleft);
+	let top = parseInt((height - h) / 2 + dtop);
+
+	return ',top=' + top + ',left=' + left;
+}
+
+jQuery.fn.expand = function() {
+	let textarea = jQuery(this);
+	let val = textarea.val();
+
+	textarea.css('height', textarea.get(0).scrollHeight + 'px');
+	textarea.val('').val(val);
+};
+
 jQuery(document).ready(function() {
 	/*************************************************************************/
 	/* PASSWORD TOGGLE */
@@ -49,27 +71,6 @@ jQuery(document).ready(function() {
 		jQuery(jQuery(this).attr("href")).toggle();
 
 		return false;
-	});
-
-	/*************************************************************************/
-	/* COPY 2 CLIPBOARD */
-	jQuery(".btn-copy2clipboard").click(function(event) {
-		event.preventDefault();
-
-		let button = jQuery(this);
-		let obj = jQuery(button.attr("href"));
-		let text = obj.html() ? obj.html() : obj.val();
-
-		TI_copyTextToClipboard(text, () => {
-			button.addClass('show-tooltip');
-
-			if(typeof this.timeout != 'undefined')
-			{
-				clearTimeout(this.timeout);
-			}
-
-			this.timeout = setTimeout(() => button.removeClass('show-tooltip'), 3000);
-		});
 	});
 
 	/*************************************************************************/
@@ -446,99 +447,6 @@ jQuery(document).ready(function() {
 	});
 
 	/*************************************************************************/
-	/* HIGHLIGHT */
-	let highlight_modal = jQuery('#ti-highlight-modal');
-	if(highlight_modal.length)
-	{
-		let appendHiddenInputs = function(obj) {
-			highlight_modal.find('input[type=hidden]').each(function() {
-				let input = jQuery(this);
-
-				obj[ input.attr('name') ] = input.val();
-			});
-
-			return obj;
-		};
-		//show highlight modal
-		jQuery(document).on('click', '.btn-highlight', function(event) {
-			event.preventDefault();
-
-			let btn = jQuery(this);
-			let review_box = btn.closest('tr').find('.ti-review-content');
-			let raw_content = review_box.html();
-			let content = raw_content.replace(/<mark class="ti-highlight">/g, '').replace(/<\/mark>/, ''); // remove current highlight tags
-
-			highlight_modal.fadeIn();
-			highlight_modal.find('.ti-highlight-content').html("<div class='raw-content'>"+ raw_content + "</div><div class='selection-content'>"+ content + "</div>");
-			highlight_modal.find('.btn-highlight-confirm, .btn-highlight-remove').attr('href', btn.attr('href'));
-
-			// toggle highlight remove button
-			if(btn.hasClass('has-highlight'))
-			{
-				highlight_modal.find('.btn-highlight-remove').show();
-			}
-			else
-			{
-				highlight_modal.find('.btn-highlight-remove').hide();
-			}
-		});
-
-		// highlight save
-		jQuery(document).on('click', '.btn-highlight-confirm', function(event) {
-			event.preventDefault();
-
-			let btn = jQuery(this);
-			let highlight_content = btn.closest('.ti-modal-content').find('.ti-highlight-content .selection-content');
-			let data = TI_highlight_getSelection(highlight_content.get(0));
-
-			if(data.start !== null) {
-				data.id = btn.attr('href');
-				data['save-highlight'] = 1;
-
-				btn.css('pointer-events', 'none');
-				btn.blur();
-				btn.addClass('btn-disabled');
-				TI_manage_dots(btn);
-				btn.closest('.ti-modal').find('.btn-text').css('pointer-events', 'none');
-
-				jQuery.ajax({
-					method: "POST",
-					url: window.location.href,
-					data: appendHiddenInputs(data)
-				}).always(function() {
-					location.reload(true);
-				});
-			}
-		});
-
-		// highlight remove
-		jQuery(document).on('click', '.btn-highlight-remove', function(event) {
-			event.preventDefault();
-
-			let btn = jQuery(this);
-			let highlight_content = btn.closest('.ti-modal-content').find('.ti-highlight-content');
-			let data = TI_highlight_getSelection(highlight_content.get(0));
-
-			btn.css('pointer-events', 'none');
-			btn.blur();
-			btn.addClass('btn-disabled');
-			TI_manage_dots(btn);
-			btn.closest('.ti-modal').find('.btn-text').css('pointer-events', 'none');
-
-			jQuery.ajax({
-				method: "POST",
-				url: window.location.href,
-				data: appendHiddenInputs({
-					id: btn.attr('href'),
-					"save-highlight": 1
-				})
-			}).always(function() {
-				location.reload(true);
-			});
-		});
-	}
-
-	/*************************************************************************/
 	/* NOTICE HIDE */
 	jQuery(document).on('click', '.ti-notice.is-dismissible .notice-dismiss', function() {
 		let button = jQuery(this);
@@ -559,99 +467,384 @@ jQuery(document).ready(function() {
 	});
 
 	/*************************************************************************/
-	/* RATE US */
-	// remember on hover
-	jQuery('.ti-rate-us-box .ti-quick-rating').on('mouseenter', function(event) {
-		let container = jQuery(this);
-		let selected = container.find('.ti-star-check.active');
+	/* DROPDOWN */
 
-		if(selected.length)
+	// change dropdown arrow positions
+	let fixDropdownArrows = function() {
+		jQuery('.ti-button-dropdown-arrow').each(function() {
+			let arrow = jQuery(this);
+			let button = arrow.closest('td').find(arrow.data('button'));
+
+			console.log('arrow fix', button, button.prevAll('.btn-text'));
+
+			// add prev buttons' width
+			let left = 0;
+			button.prevAll('.btn-text').each(function() {
+				left += jQuery(this).outerWidth(true);
+			});
+
+			// center the arrow
+			left += button.outerWidth() / 2;
+
+			arrow.css('left', left + 'px');
+		});
+	};
+
+	fixDropdownArrows();
+
+	/*************************************************************************/
+	/* AI REPLY */
+	let generateAiReply = function(text, callback) {
+		let ti_window = window.open('', 'trustindex-generate-ai-reply', 'width=500,height=500,menubar=0' + popupCenter(500, 500));
+		let form = document.createElement('form');
+		let input = document.createElement('input');
+
+		// create form to pass POST data
+		form.target = 'trustindex-generate-ai-reply';
+		form.method = 'POST';
+		form.action = 'https://admin.trustindex.io/integration/generateAiReply';
+		form.style.display = 'none';
+
+		// data will be in a hidden input
+		input.type = 'hidden';
+		input.name = 'json';
+		input.value = JSON.stringify({ text: text, language: jQuery('html').attr('lang').substr(0, 2) });
+		form.appendChild(input);
+
+		// add form to body
+		document.body.appendChild(form);
+
+		if(ti_window)
 		{
-			// add index to data & remove all active stars
-			container.data('selected', selected.index()).find('.ti-star-check').removeClass('active');
-
-			// give back active star on mouse enter
-			container.one('mouseleave', () => container.find('.ti-star-check').eq(container.data('selected')).addClass('active'));
+			form.submit();
 		}
-	});
 
-	// star click
-	jQuery(document).on('click', '.ti-rate-us-box .ti-quick-rating .ti-star-check', function(event) {
+		// remove added form
+		form.remove();
+
+		// popup close interval
+		let timer = setInterval(function() {
+			if(ti_window.closed)
+			{
+				callback(false);
+
+				clearInterval(timer);
+			}
+		}, 1000);
+
+		// wait for response from Trustindex
+		jQuery(window).one('message', function(event) {
+			if(ti_window == event.originalEvent.source) // event comes from the correct window
+			{
+				clearInterval(timer);
+
+				callback(event.originalEvent.data.reply);
+
+				ti_window.close();
+			}
+		});
+	};
+
+	let postReply = function(data, reconnect, callback) {
+		let ti_window = window.open('', 'trustindex-post-reply', 'width=600,height=600,menubar=0' + popupCenter(600, 600));
+		let form = document.createElement('form');
+		let input = document.createElement('input');
+
+		// create form to pass POST data
+		form.target = 'trustindex-post-reply';
+		form.method = 'POST';
+		form.action = 'https://admin.trustindex.io/integration/postReply?type=google';
+		form.style.display = 'none';
+
+		if(reconnect)
+		{
+			form.action += '&reconnect=1';
+		}
+
+		// data will be in a hidden input (JSON)
+		input.type = 'hidden';
+		input.name = 'json';
+		input.value = JSON.stringify(data);
+		form.appendChild(input);
+
+		// add form to body
+		document.body.appendChild(form);
+
+		if(ti_window)
+		{
+			form.submit();
+		}
+
+		// remove added form
+		form.remove();
+
+		// popup close interval
+		let timer = setInterval(function() {
+			if(ti_window.closed)
+			{
+				callback(undefined);
+
+				clearInterval(timer);
+			}
+		}, 1000);
+
+		// wait for response from Trustindex
+		jQuery(window).one('message', function(event) {
+			if(ti_window == event.originalEvent.source) // event comes from the correct window
+			{
+				clearInterval(timer);
+
+				callback(!!event.originalEvent.data.success);
+
+				ti_window.close();
+			}
+		});
+	};
+
+	// show reply section
+	//	- generate reply with AI if not edit
+	jQuery(document).on('click', '.btn-show-ai-reply', function(event) {
 		event.preventDefault();
 
-		let star = jQuery(this);
-		let container = star.parent();
+		let btn = jQuery(this);
+		let td = btn.closest('td');
 
-		// add index to data & remove all active stars
-		container.data('selected', star.index()).find('.ti-star-check').removeClass('active');
+		btn.addClass('btn-loading').blur();
 
-		// select current star
-		star.addClass('active');
+		let reply_box = td.find('.ti-reply-box');
+		reply_box.find('.btn-post-reply').attr('data-reconnect', 0);
+		reply_box.find('.ti-alert').addClass('d-none');
 
-		// show modals
-		if(parseInt(star.data('value')) >= 4)
+		// generate reply with AI if not edit
+		if(reply_box.attr('data-state') == 'reply' || reply_box.attr('data-state') == 'copy-reply')
 		{
-			// open new window
-			window.open(location.href + '&command=rate-us-feedback&star=' + star.data('value'), '_blank');
+			let data = JSON.parse(reply_box.next().html());
+			generateAiReply(data.review.text, function(reply) {
+				btn.removeClass('btn-loading');
 
-			jQuery('.ti-rate-us-box').fadeOut();
+				// popup closed
+				if(reply === false)
+				{
+					return;
+				}
+
+				btn.addClass('btn-default-disabled');
+				reply_box.addClass('active');
+
+				td.find('.ti-highlight-box').removeClass('active');
+				td.find('.btn-show-highlight').removeClass('btn-default-disabled');
+
+				let textarea = reply_box.find('.state-'+ reply_box.attr('data-state') +' textarea');
+				textarea.val(reply).focus().expand();
+
+				// save in DB
+				jQuery.ajax({
+					method: 'POST',
+					url: window.location.href,
+					data: { 'save-reply-generated': 1 }
+				});
+			});
 		}
 		else
 		{
-			let feedback_modal = jQuery('#ti-rateus-modal-feedback');
+			btn.removeClass('btn-loading').addClass('btn-default-disabled');
+			reply_box.addClass('active');
 
-			feedback_modal.fadeIn();
-			feedback_modal.find('.ti-quick-rating .ti-star-check').removeClass('active').eq(star.index()).addClass('active');
-			feedback_modal.find('textarea').focus();
+			td.find('.ti-highlight-box').removeClass('active');
+			td.find('.btn-show-highlight').removeClass('btn-default-disabled');
 		}
 	});
 
-	// write to support
-	jQuery(document).on('click', '.btn-rateus-support', function(event) {
+	// hide reply section
+	jQuery(document).on('click', '.btn-hide-ai-reply', function(event) {
 		event.preventDefault();
 
 		let btn = jQuery(this);
 		btn.blur();
 
-		let container = jQuery('#ti-rateus-modal-feedback');
-		let email = container.find('input[type=text]').val().trim();
-		let text = container.find('textarea').val().trim();
+		let reply_box = btn.closest('td').find('.ti-reply-box');
+		reply_box.attr('data-state', reply_box.attr('data-original-state'));
 
-		// hide errors
-		container.find('input[type=text], textarea').removeClass('has-error');
-
-		// check email
-		if(email == "" || !/^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/.test(email))
+		if(reply_box.attr('data-state') != 'replied')
 		{
-			container.find('input[type=text]').addClass('has-error');
+			reply_box.removeClass('active');
 		}
 
-		// check text
-		if(text == "")
+		btn.closest('td').find('.btn-show-ai-reply').removeClass('btn-default-disabled');
+	});
+
+	// show edit reply section
+	jQuery(document).on('click', '.btn-show-edit-reply', function(event) {
+		event.preventDefault();
+
+		let btn = jQuery(this);
+		let reply_box = btn.closest('td').find('.ti-reply-box');
+
+		reply_box.attr('data-state', 'edit-reply');
+		reply_box.find('.state-edit-reply textarea').focus().expand();
+	});
+
+	// hide edit reply section
+	jQuery(document).on('click', '.btn-hide-edit-reply', function(event) {
+		event.preventDefault();
+
+		let btn = jQuery(this);
+		let reply_box = btn.closest('td').find('.ti-reply-box');
+
+		reply_box.find('.ti-alert').addClass('d-none');
+		reply_box.attr('data-state', 'replied');
+	});
+
+	// post reply
+	jQuery(document).on('click', '.btn-post-reply', function(event) {
+		event.preventDefault();
+
+		let btn = jQuery(this);
+		let reply_box = btn.closest('td').find('.ti-reply-box');
+		let data = JSON.parse(reply_box.next().html());
+
+		let textarea = btn.closest('.ti-reply-box-state').find('textarea');
+		let reply = textarea.val().trim();
+
+		textarea.removeClass('has-error');
+
+		if(reply == "")
 		{
-			container.find('textarea').addClass('has-error');
+			return textarea.addClass('has-error');
 		}
 
-		// there is error
-		if(container.find('.has-error').length)
+		btn.addClass('btn-loading').blur();
+
+		data.reply = reply;
+
+		postReply(data, btn.attr('data-reconnect') == 1, function(is_success) {
+			btn.removeClass('btn-loading');
+
+			// popup closed
+			if(is_success === undefined)
+			{
+				return;
+			}
+
+			if(is_success)
+			{
+				// save in DB
+				jQuery.ajax({
+					method: 'POST',
+					url: window.location.href,
+					data: {
+						id: btn.attr('href'),
+						'save-reply': reply
+					}
+				});
+
+				// show replied section
+				reply_box.attr('data-state', 'replied').attr('data-original-state', 'replied');
+				reply_box.find('.state-replied p').html(reply);
+				reply_box.find('.state-edit-reply textarea').val(reply);
+				reply_box.find('.state-replied .ti-alert').removeClass('d-none');
+
+				// change Reply with AI button text
+				let reply_button = reply_box.closest('td').find('.btn-show-ai-reply:not(.btn-default)');
+				if(reply_button.length)
+				{
+					reply_button.html(reply_button.data('edit-reply-text')).addClass('btn-default');
+					setTimeout(fixDropdownArrows, 100);
+				}
+			}
+			else
+			{
+				// set try again button state
+				reply_box.find('.state-copy-reply .btn-try-reply-again').data('state', reply_box.attr('data-state'));
+
+				// show copy section
+				reply_box.attr('data-state', 'copy-reply');
+				reply_box.find('.state-copy-reply textarea').val(reply).focus().expand();
+				reply_box.find('.state-copy-reply .ti-alert').removeClass('d-none');
+			}
+		});
+	});
+
+	/*************************************************************************/
+	/* HIGHLIGHT */
+
+	// show highlight section
+	jQuery(document).on('click', '.btn-show-highlight', function(event) {
+		event.preventDefault();
+
+		let btn = jQuery(this);
+		let td = btn.closest('td');
+		let reply_box = td.find('.ti-reply-box');
+
+		btn.addClass('btn-default-disabled').blur();
+		td.find('.ti-highlight-box').addClass('active');
+
+		reply_box.attr('data-state', reply_box.attr('data-original-state'));
+		reply_box.removeClass('active');
+
+		td.find('.btn-show-ai-reply').removeClass('btn-default-disabled');
+	});
+
+	// hide highlight section
+	jQuery(document).on('click', '.btn-hide-highlight', function(event) {
+		event.preventDefault();
+
+		let btn = jQuery(this);
+		let td = btn.closest('td');
+
+		btn.blur();
+
+		td.find('.ti-highlight-box').removeClass('active');
+		td.find('.btn-show-highlight').removeClass('btn-default-disabled');
+		td.find('.ti-reply-box[data-state="replied"]').addClass('active');
+
+		if(td.find('.ti-reply-box').attr('data-state') == 'replied')
 		{
-			return false;
+			td.find('.btn-show-ai-reply').addClass('btn-default-disabled');
 		}
+	});
 
-		// show loading animation
-		btn.css('pointer-events', 'none').addClass('btn-disabled');
-		TI_manage_dots(btn);
-		btn.closest('.ti-modal').find('.btn-text').css('pointer-events', 'none');
+	// highlight save
+	jQuery(document).on('click', '.btn-save-highlight', function(event) {
+		event.preventDefault();
 
-		// ajax request
+		let btn = jQuery(this);
+		let highlight_content = btn.closest('td').find('.ti-highlight-content .selection-content');
+		let data = TI_highlight_getSelection(highlight_content.get(0));
+
+		if(data.start !== null)
+		{
+			data.id = btn.attr('href');
+			data['save-highlight'] = 1;
+
+			btn.addClass('btn-loading').blur();
+			btn.closest('td').find('.btn-text').css('pointer-events', 'none');
+
+			jQuery.ajax({
+				method: "POST",
+				url: window.location.href,
+				data: data
+			}).always(function() {
+				location.reload(true);
+			});
+		}
+	});
+
+	// highlight remove
+	jQuery(document).on('click', '.btn-remove-highlight', function(event) {
+		event.preventDefault();
+
+		let btn = jQuery(this);
+
+		btn.addClass('btn-loading').blur();
+		btn.closest('td').find('.btn-text').css('pointer-events', 'none');
+
 		jQuery.ajax({
-			type: 'post',
-			dataType: 'application/json',
+			method: "POST",
+			url: window.location.href,
 			data: {
-				command: 'rate-us-feedback',
-				email: email,
-				text: text,
-				star: container.find('.ti-quick-rating .ti-star-check.active').data('value')
+				id: btn.attr('href'),
+				"save-highlight": 1
 			}
 		}).always(function() {
 			location.reload(true);
@@ -659,54 +852,39 @@ jQuery(document).ready(function() {
 	});
 });
 
-//btn: JQuery Element
-function TI_manage_dots(btn)
-{
-	let old_text = btn.html();
-	let loading_text = btn.data('loading-text');
-	let dots = [ '.', '..', '...' ];
-	let index = dots.length - 1;
 
-	btn.data('old', old_text);
-	btn.html(loading_text + dots[index]);
+// - import/copy-to-clipboard.js
+jQuery(document).on('click', '.btn-copy2clipboard', function(event) {
+	event.preventDefault();
 
-	btn.animationInterval = setInterval(function() {
-		index++;
+	let btn = jQuery(this);
+	btn.blur();
 
-		if(index >= dots.length)
+	let obj = jQuery(btn.attr('href'));
+	let text = obj.html() ? obj.html() : obj.val();
+
+	// parse html
+	let textArea = document.createElement('textarea');
+	textArea.innerHTML = text;
+	text = textArea.value;
+
+	let feedback = () => {
+		btn.addClass('show-tooltip');
+
+		if(typeof this.timeout != 'undefined')
 		{
-			index = 0;
+			clearTimeout(this.timeout);
 		}
 
-		btn.html(loading_text + dots[index]);
-	}, 1000);
-
-	btn.restore = function() {
-		btn.html(old_text);
-
-		clearInterval(btn.animationInterval);
+		this.timeout = setTimeout(() => btn.removeClass('show-tooltip'), 3000);
 	};
-}
 
-function decodeHTMLEntities(text)
-{
-	let textArea = document.createElement('textarea');
-
-	textArea.innerHTML = text;
-
-	return textArea.value;
-}
-
-function TI_copyTextToClipboard(text, callback)
-{
-	text = decodeHTMLEntities(text);
-
-	if (!navigator.clipboard)
+	if(!navigator.clipboard)
 	{
 		//fallback
-		var textArea = document.createElement("textarea");
+		textArea = document.createElement("textarea");
 		textArea.value = text;
-		textArea.style.position="fixed";  //avoid scrolling to bottom
+		textArea.style.position = "fixed"; //avoid scrolling to bottom
 		document.body.appendChild(textArea);
 		textArea.focus();
 		textArea.select();
@@ -714,25 +892,233 @@ function TI_copyTextToClipboard(text, callback)
 		try {
 			var successful = document.execCommand('copy');
 
-			if(callback)
-			{
-				callback();
-			}
-			//console.log('Fallback: Copying text command was ' + msg);
-		} catch (err) {
-			//console.error('Fallback: Oops, unable to copy', err);
-		}
+			feedback();
+		} catch (err) { }
 
 		document.body.removeChild(textArea);
 		return;
 	}
-	navigator.clipboard.writeText(text).then(
-		function() {
-			if(callback)
+
+	navigator.clipboard.writeText(text).then(feedback);
+});
+
+// - import/input-file-upload.js
+jQuery(document).on('click', '.ti-input-file-upload button', function(event) {
+	event.preventDefault();
+
+	let btn = jQuery(this);
+	let input = btn.prev();
+
+	input.val('').click();
+
+	input.off().on('change', function(event) {
+		event.preventDefault();
+
+		let files = [];
+
+		for(let i = 0; i < input[0].files.length; i++)
+		{
+			let tmp = input[0].files[i].name.split('.');
+			let ext = tmp.pop();
+			let name = tmp.join('.');
+
+			if(name.length > 20)
 			{
-				callback();
+				name = name.substr(0, 20) + '..';
 			}
-		},
-		function(err) {/*console.error('Async: Could not copy text: ', err);*/}
-	);
-}
+
+			files.push(name + '.' + ext);
+		}
+
+		if(btn.find('.ti-info-text').length == 0)
+		{
+			btn.append('<span class="ti-info-text"></span>');
+		}
+
+		btn.find('.ti-info-text').html(files.join(', '));
+	});
+});
+
+// - import/feature-request.js
+jQuery(document).on('click', '.btn-send-feature-request', function(event) {
+	event.preventDefault();
+
+	let btn = jQuery(this);
+	btn.blur();
+
+	let container = jQuery('.ti-feature-request');
+	let email = container.find('input[name="email"]').val().trim();
+	let text = container.find('textarea[name="description"]').val().trim();
+
+	// hide errors
+	container.find('.is-invalid').removeClass('is-invalid');
+
+	// check email
+	if(email == "" || !/^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/.test(email))
+	{
+		container.find('input[name="email"]').addClass('is-invalid');
+	}
+
+	// check text
+	if(text == "")
+	{
+		container.find('textarea[name="description"]').addClass('is-invalid');
+	}
+
+	// check attachments
+	let attachments = container.find('input[type="file"]')[0].files;
+
+	if(attachments.length > 3)
+	{
+		container.find('.ti-input-file-upload').addClass('is-invalid');
+	}
+	else
+	{
+		let found_larger = false;
+		for(let i = 0; i < attachments.length; i++)
+		{
+			if(attachments[i].size > 3145728)
+			{
+				found_larger = true;
+				break;
+			}
+		}
+
+		if(found_larger)
+		{
+			container.find('.ti-input-file-upload').addClass('is-invalid');
+		}
+	}
+
+	// there is error
+	if(container.find('.is-invalid').length)
+	{
+		return false;
+	}
+
+	// show loading animation
+	btn.addClass('btn-loading');
+
+	let data = new FormData(jQuery('.ti-feature-request form').get(0));
+
+	// ajax request
+	jQuery.ajax({
+		type: 'POST',
+		data: data,
+		cache: false,
+		contentType: false,
+		processData: false
+	}).always(function() {
+		btn.removeClass('btn-loading');
+
+		btn.addClass('show-tooltip');
+		setTimeout(() => btn.removeClass('show-tooltip'), 3000);
+	});
+});
+
+// - import/rate-us.js
+// remember on hover
+jQuery(document).on('mouseenter', '.ti-rate-us-box .ti-quick-rating', function(event) {
+	let container = jQuery(this);
+	let selected = container.find('.ti-star-check.active');
+
+	if(selected.length)
+	{
+		// add index to data & remove all active stars
+		container.data('selected', selected.index()).find('.ti-star-check').removeClass('active');
+
+		// give back active star on mouse enter
+		container.one('mouseleave', () => container.find('.ti-star-check').eq(container.data('selected')).addClass('active'));
+	}
+});
+
+// star click
+jQuery(document).on('click', '.ti-rate-us-box .ti-quick-rating .ti-star-check', function(event) {
+	event.preventDefault();
+
+	let star = jQuery(this);
+	let container = star.parent();
+
+	// add index to data & remove all active stars
+	container.data('selected', star.index()).find('.ti-star-check').removeClass('active');
+
+	// select current star
+	star.addClass('active');
+
+	// show modals
+	if(parseInt(star.data('value')) >= 4)
+	{
+		// open new window
+		window.open(location.href + '&command=rate-us-feedback&star=' + star.data('value'), '_blank');
+
+		jQuery('.ti-rate-us-box').fadeOut();
+	}
+	else
+	{
+		let feedback_modal = jQuery('#ti-rateus-modal-feedback');
+
+		if(feedback_modal.data('bs') == '5')
+		{
+			feedback_modal.modal('show');
+			setTimeout(() => feedback_modal.find('textarea').focus(), 500);
+		}
+		else
+		{
+			feedback_modal.fadeIn();
+			feedback_modal.find('textarea').focus();
+		}
+
+		feedback_modal.find('.ti-quick-rating .ti-star-check').removeClass('active').eq(star.index()).addClass('active');
+	}
+});
+
+// write to support
+jQuery(document).on('click', '.btn-rateus-support', function(event) {
+	event.preventDefault();
+
+	let btn = jQuery(this);
+	btn.blur();
+
+	let container = jQuery('#ti-rateus-modal-feedback');
+	let email = container.find('input[type=text]').val().trim();
+	let text = container.find('textarea').val().trim();
+
+	// hide errors
+	container.find('input[type=text], textarea').removeClass('is-invalid');
+
+	// check email
+	if(email == "" || !/^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/.test(email))
+	{
+		container.find('input[type=text]').addClass('is-invalid').focus();
+	}
+
+	// check text
+	if(text == "")
+	{
+		container.find('textarea').addClass('is-invalid').focus();
+	}
+
+	// there is error
+	if(container.find('.is-invalid').length)
+	{
+		return false;
+	}
+
+	// show loading animation
+	btn.addClass('btn-loading');
+	btn.closest('.ti-modal').find('.btn-light, .btn-text').css('pointer-events', 'none');
+
+	// ajax request
+	jQuery.ajax({
+		type: 'post',
+		dataType: 'application/json',
+		data: {
+			command: 'rate-us-feedback',
+			email: email,
+			text: text,
+			star: container.find('.ti-quick-rating .ti-star-check.active').data('value')
+		}
+	}).always(function() {
+		location.reload(true);
+	});
+});
