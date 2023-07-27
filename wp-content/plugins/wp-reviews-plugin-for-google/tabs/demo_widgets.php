@@ -1,7 +1,7 @@
 <div class="ti-preview-boxes-container">
 <div class="ti-full-width">
 <div class="ti-box ti-preview-boxes">
-<div class="ti-header">
+<div class="ti-box-header">
 <span class="ti-header-layout-text">
 <?php echo TrustindexPlugin_google::___('Example Widget'); ?>:
 <strong><?php echo esc_html(TrustindexPlugin_google::___(TrustindexPlugin_google::$widget_templates['templates'][4]['name'])); ?></strong>
@@ -13,37 +13,31 @@
 </div>
 <?php
 $demo_list = [
-36 => 'drop-shadow',
-15 => 'light-background-large',
-39 => 'ligth-border-3d-large',
 5 => 'light-minimal',
-34 => 'ligth-border',
+36 => 'ligth-border',
+34 => 'drop-shadow',
 13 => 'dark-background',
-19 => 'light-square',
-37 => 'drop-shadow-large',
-44 => 'dark-contrast',
+15 => 'drop-shadow',
+37 => 'ligth-border',
 33 => 'light-minimal',
-16 => 'drop-shadow-large',
-38 => 'dark-background',
+16 => 'drop-shadow',
 31 => 'soft',
-6 => 'light-background-large',
-7 => 'light-minimal',
-8 => 'light-background-large',
-9 => 'ligth-border-3d-large',
-24 => 'light-background',
-25 => 'light-background-large',
+54 => 'light-background',
+6 => 'light-background',
+18 => 'light-background',
+8 => 'light-background',
+27 => 'ligth-border',
 26 => 'ligth-border',
-27 => 'ligth-border-3d-large',
-28 => 'drop-shadow',
 29 => 'drop-shadow',
-35 => 'light-contrast',
 30 => 'dark-background',
-32 => 'dark-border',
-22 => 'light-background-large',
+60 => 'light-background',
+25 => 'light-background',
+32 => 'dark-background',
+22 => 'light-background',
 23 => 'ligth-border',
-11 => 'drop-shadow-large',
-12 => 'light-minimal',
-55 => 'light-minimal'
+55 => 'light-minimal',
+11 => 'drop-shadow',
+12 => 'light-minimal'
 ];
 foreach($demo_list as $layout => $style): ?>
 <?php
@@ -56,7 +50,7 @@ $class_name = 'ti-half-width';
 ?>
 <div class="<?php echo esc_attr($class_name); ?>">
 <div class="ti-box ti-preview-boxes" data-layout-id="<?php echo esc_attr($layout); ?>" data-set-id="<?php echo esc_attr($style); ?>">
-<div class="ti-header">
+<div class="ti-box-header">
 <span class="ti-header-layout-text">
 <?php echo TrustindexPlugin_google::___('Example Widget'); ?>:
 <strong><?php echo esc_html(TrustindexPlugin_google::___($template['name'])); ?></strong>

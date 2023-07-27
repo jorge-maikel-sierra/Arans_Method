@@ -130,6 +130,7 @@ class TRP_Language_Switcher{
 
 		$shortcode_attributes = shortcode_atts( array(
 			'display' => 0,
+			'is_editor' => 0,
 		), $atts );
 
 		if ( ! $this->trp_languages ){
@@ -168,6 +169,8 @@ class TRP_Language_Switcher{
 			$shortcode_settings = $ls_options[ $this->settings['shortcode-options'] ];
 		}
 
+        $is_editor = isset( $shortcode_attributes['is_editor'] ) && $shortcode_attributes['is_editor'] === 'true';
+
 		require TRP_PLUGIN_DIR . 'partials/language-switcher-shortcode.php';
 
 		return ob_get_clean();
@@ -180,13 +183,18 @@ class TRP_Language_Switcher{
      *
      * Hooked on wp_enqueue_scripts.
      */
-    public function enqueue_language_switcher_scripts( ){
+    public function enqueue_language_switcher_scripts( ) {
 
-        if ( isset( $this->settings['trp-ls-floater'] ) && $this->settings['trp-ls-floater'] == 'yes' ) {
-            wp_enqueue_style('trp-floater-language-switcher-style', TRP_PLUGIN_URL . 'assets/css/trp-floater-language-switcher.css', array(), TRP_PLUGIN_VERSION );
+        if ( apply_filters( 'trp_enqueue_style_language_switcher_css', true ) ) {
+
+            if ( isset( $this->settings['trp-ls-floater'] ) && $this->settings['trp-ls-floater'] == 'yes' ) {
+                $floater_path = apply_filters( 'trp_old_css_styling_for_floater_ls', false ) ? TRP_PLUGIN_URL . 'assets/css/trp-floater-language-switcher-old.css' : TRP_PLUGIN_URL . 'assets/css/trp-floater-language-switcher.css';
+                wp_enqueue_style('trp-floater-language-switcher-style', $floater_path, array(), TRP_PLUGIN_VERSION);
+            }
+
+            $shortcode_path = apply_filters( 'trp_old_css_styling_for_shortcode_ls', false ) ? TRP_PLUGIN_URL . 'assets/css/trp-language-switcher-old.css' : TRP_PLUGIN_URL . 'assets/css/trp-language-switcher.css';
+            wp_enqueue_style( 'trp-language-switcher-style', $shortcode_path, array(), TRP_PLUGIN_VERSION );
         }
-
-        wp_enqueue_style( 'trp-language-switcher-style', TRP_PLUGIN_URL . 'assets/css/trp-language-switcher.css', array(), TRP_PLUGIN_VERSION );
     }
 
     /**
@@ -258,6 +266,7 @@ class TRP_Language_Switcher{
         if( $this->settings['trp-ls-show-poweredby'] == 'yes' ) {
             $floater_class .= ' trp-poweredby';
         }
+        $floater_class .= ' ' . $this->settings['floater-options'];
 
         $current_language = array();
         $other_languages = array();
@@ -299,7 +308,7 @@ class TRP_Language_Switcher{
 
                 <?php
                 if( $this->settings['trp-ls-show-poweredby'] == 'yes' ){
-	                $powered_by = '<div id="trp-floater-poweredby">Powered by TranslatePress <a href="https://translatepress.com/?utm_source=language_switcher&utm_medium=clientsite&utm_campaign=TPLS" rel="nofollow" target="_blank" title="WordPress Translation Plugin">&raquo;</a></div>';
+	                $powered_by = '<div id="trp-floater-poweredby">Powered by <a href="https://translatepress.com/?utm_source=language_switcher&utm_medium=clientsite&utm_campaign=TPLS" rel="nofollow" target="_blank" title="WordPress Translation Plugin">TranslatePress</a></div>';
                 } else {
 	                $powered_by = '';
                 }
@@ -313,13 +322,13 @@ class TRP_Language_Switcher{
                 $floater_position = 'bottom';
                 if ( !empty( $this->settings['floater-position'] ) && strpos( $this->settings['floater-position'], 'top' ) !== false  ){
 	                  echo $powered_by; // phpcs:ignore
-	                  echo '<div class="trp-language-wrap">';
+	                  echo '<div class="trp-language-wrap" style="padding: 10px;">';
 	                  echo $disabled_language; // phpcs:ignore
                     $floater_position = 'top';
                 }
 
                 if ( $floater_position == 'bottom' ){
-                    echo '<div class="trp-language-wrap">';
+                    echo '<div class="trp-language-wrap"  style="padding: 11px;">';
 	              }
 
                 foreach( $other_languages as $code => $name ) {
@@ -553,3 +562,6 @@ class TRP_Language_Switcher{
     }
 
 }
+
+
+

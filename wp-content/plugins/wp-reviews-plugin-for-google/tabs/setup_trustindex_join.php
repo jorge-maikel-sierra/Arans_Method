@@ -65,7 +65,7 @@ $widget_number = $trustindex_pm_google->get_trustindex_widget_number();
 <?php echo TrustindexPlugin_google::get_noticebox("error", $ti_error); ?>
 <?php endif; ?>
 <div class="ti-box">
-<div class="ti-header"><?php echo TrustindexPlugin_google::___('Connect your Trustindex account'); ?></div>
+<div class="ti-box-header"><?php echo TrustindexPlugin_google::___('Connect your Trustindex account'); ?></div>
 <p><strong><?php echo TrustindexPlugin_google::___('You can connect your %s with your Trustindex account, and can display your widgets easier.', [ 'Widgets for Google Reviews' ]); ?></strong></p>
 <?php if ($trustindex_subscription_id): ?>
 <?php
@@ -88,7 +88,7 @@ $ti_package = is_array($ti_widgets) && $ti_widgets && isset($ti_widgets[0]['pack
 <input type="hidden" name="command" value="disconnect" />
 <?php wp_nonce_field( 'disconnect-reg_'.$trustindex_pm_google->get_plugin_slug() ); ?>
 <div class="text-center">
-<button class="btn btn-text" type="submit" style="margin-top: 20px; margin-bottom: 0"><?php echo TrustindexPlugin_google::___("Disconnect"); ?></button>
+<button class="btn btn-text btn-refresh" type="submit" style="margin-top: 20px; margin-bottom: 0"><?php echo TrustindexPlugin_google::___("Disconnect"); ?></button>
 </div>
 </form>
 <?php else: ?>
@@ -118,11 +118,11 @@ id="ti-reg-password2"
 />
 <span class="dashicons dashicons-visibility ti-toggle-password"></span>
 </div>
-<button type="submit" class="btn btn-primary" data-loading-text="<?php echo TrustindexPlugin_google::___("Loading") ;?>"><?php echo TrustindexPlugin_google::___('CONNECT ACCOUNT');?></button>
+<button type="submit" class="btn btn-primary btn-refresh"><?php echo TrustindexPlugin_google::___('CONNECT ACCOUNT');?></button>
 <br />
 <p class="text-center">
-<a class="btn-text" href="<?php echo 'https://admin.trustindex.io/'; ?>forgot-password" target="_blank"><?php echo TrustindexPlugin_google::___('Have you forgotten your password?'); ?></a>
-<a class="btn-text" href="https://www.trustindex.io/ti-redirect.php?a=sys&c=wp-google-4" target="_blank"><?php echo TrustindexPlugin_google::___('Create a new Trustindex account');?></a>
+<a class="btn-text btn-default" href="<?php echo 'https://admin.trustindex.io/'; ?>forgot-password" target="_blank"><?php echo TrustindexPlugin_google::___('Have you forgotten your password?'); ?></a>
+<a class="btn-text btn-default" href="https://www.trustindex.io/ti-redirect.php?a=sys&c=wp-google-4" target="_blank"><?php echo TrustindexPlugin_google::___('Create a new Trustindex account');?></a>
 </p>
 </form>
 <div class="ti-col-6"></div>
@@ -131,14 +131,14 @@ id="ti-reg-password2"
 </div>
 <?php if($trustindex_subscription_id): ?>
 <div class="ti-box disabled">
-<div class="ti-header"><?php echo TrustindexPlugin_google::___("Manage your Trustindex account"); ?></div>
+<div class="ti-box-header"><?php echo TrustindexPlugin_google::___("Manage your Trustindex account"); ?></div>
 <a class="btn-text" href="<?php echo 'https://admin.trustindex.io/'; ?>widget" target="_blank" <?php if ($ti_success == "connected"): ?>data-autoclick="true"<?php endif; ?>><?php echo TrustindexPlugin_google::___("Go to Trustindex's admin!"); ?></a>
 <?php if ($ti_success == "connected"): ?>
 <?php echo TrustindexPlugin_google::get_noticebox("success", TrustindexPlugin_google::___('We will redirect you to the admin panel automatically in some seconds...')); ?>
 <?php endif; ?>
 </div>
 <div class="ti-box">
-<div class="ti-header"><?php echo TrustindexPlugin_google::___("Insert your widget into your wordpress site using shortcode"); ?></div>
+<div class="ti-box-header"><?php echo TrustindexPlugin_google::___("Insert your widget into your wordpress site using shortcode"); ?></div>
 <?php if($trustindex_subscription_id): ?>
 <?php if($widget_number): ?>
 <p>

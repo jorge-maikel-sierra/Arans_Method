@@ -167,50 +167,61 @@ class TRP_Url_Converter {
             $languages = $this->settings['translation-languages'];
         }
 
-            $region_independent_languages = array();
-            $hreflang_duplicates = array();
-            $hreflang_duplicates_region_independent  = array();
+        $region_independent_languages           = array();
+        $hreflang_duplicates                    = array();
+        $hreflang_duplicates_region_independent = array();
         foreach ( $languages as $language ) {
-            if( apply_filters( 'trp_add_country_hreflang_tags', true ) ){
+            if ( apply_filters( 'trp_add_country_hreflang_tags', true ) ) {
+                $hreflang              = $this->strip_formality_from_language_code( $language ); // returns the language without formality
                 // hreflang should have - instead of _ . For example: en-EN, not en_EN like the locale
-                $hreflang = str_replace( '_', '-', $language );
-                $hreflang = apply_filters( 'trp_hreflang', $hreflang, $language );
+                $hreflang              = str_replace( '_', '-', $hreflang );
+                $hreflang              = apply_filters( 'trp_hreflang', $hreflang, $language );
                 $hreflang_duplicates[] = $hreflang;
                 echo '<link rel="alternate" hreflang="' . esc_attr( $hreflang ) . '" href="' . esc_url( $this->get_url_for_language( $language ) ) . '"/>' . "\n";
             }
 
             if ( apply_filters( 'trp_add_region_independent_hreflang_tags', true ) ) {
                 $language_independent_hreflang = strtok( $language, '_' );
-                $language_independent_hreflang = apply_filters( 'trp_hreflang', $language_independent_hreflang, $language);
+                $language_independent_hreflang = apply_filters( 'trp_hreflang', $language_independent_hreflang, $language );
                 if ( !empty( $language_independent_hreflang ) && !in_array( $language_independent_hreflang, $region_independent_languages ) ) {
-                    $region_independent_languages[] = $language_independent_hreflang;
-                    $hreflang_duplicates_region_independent[$language] = '<link rel="alternate" hreflang="' . esc_attr( $language_independent_hreflang ) . '" href="' . esc_url( $this->get_url_for_language( $language ) ) . '"/>' . "\n";
+                    $region_independent_languages[]                      = $language_independent_hreflang;
+                    $hreflang_duplicates_region_independent[ $language ] = '<link rel="alternate" hreflang="' . esc_attr( $language_independent_hreflang ) . '" href="' . esc_url( $this->get_url_for_language( $language ) ) . '"/>' . "\n";
 
                 }
             }
         }
 
-        foreach ($languages as $language){
+        foreach ( $languages as $language ) {
             $language_hreflang = strtok( $language, '_' );
             $language_hreflang = apply_filters( 'trp_hreflang', $language_hreflang, $language );
-            if (!in_array($language_hreflang, $hreflang_duplicates)){
-                if(isset($hreflang_duplicates_region_independent[ $language ] )) {
+            if ( !in_array( $language_hreflang, $hreflang_duplicates ) ) {
+                if ( isset( $hreflang_duplicates_region_independent[ $language ] ) ) {
                     echo $hreflang_duplicates_region_independent[ $language ]; /* phpcs:ignore */ /* escaped inside the array */
                 }
             }
         }
 
-            if ( isset( $this->settings['trp_advanced_settings']['enable_hreflang_xdefault'] ) && $this->settings['trp_advanced_settings']['enable_hreflang_xdefault'] != 'disabled' ) {
-                $default_lang = $this->settings['trp_advanced_settings']['enable_hreflang_xdefault'];
-                echo '<link rel="alternate" hreflang="x-default" href="' . esc_url( $this->get_url_for_language( $default_lang ) ) . '"/>' . "\n";
-            }
+        if ( !empty( $this->settings['trp_advanced_settings']['enable_hreflang_xdefault'] ) && $this->settings['trp_advanced_settings']['enable_hreflang_xdefault'] != 'disabled' && in_array( $this->settings['trp_advanced_settings']['enable_hreflang_xdefault'], $this->settings['translation-languages'] ) ) {
+            $default_lang = $this->settings['trp_advanced_settings']['enable_hreflang_xdefault'];
+            echo '<link rel="alternate" hreflang="x-default" href="' . esc_url( $this->get_url_for_language( $default_lang ) ) . '"/>' . "\n";
         }
+    }
 
+    /**
+     * Strips formality from the language code - e.g. de_DE_formal => de_DE
+     *
+     * Otherwise, it would lead to unidentified hreflang values
+     *
+     * @param string $language language code
+     * @return string
+     */
+    public function strip_formality_from_language_code( $language ){
+        return str_replace( ['_formal', '_informal'], '', $language );
+    }
 
     /**
      * Function that replace iso 639-2 and iso 639-3 with iso 639-1 because this is the official one used for hreflang.
      */
-
     public function replace_iso_2_with_iso_3_for_hreflang($hreflang, $language = null){
 
         $hreflang_iso_1 = apply_filters('trp_add_hreflang_correct_iso_code', array(
@@ -281,6 +292,8 @@ class TRP_Url_Converter {
 	    if ( empty($url) ){
 		    $url = $this->cur_page_url();
 	    }
+
+        $url = urldecode($url);
 
 	    if(apply_filters('trp_skip_url_for_language', false, $url)){
 		    return (string)$url;
@@ -491,14 +504,14 @@ class TRP_Url_Converter {
             }
             if ($this->get_lang_from_url_string($url) === null) {
                 // these are the custom url. They don't have language
-                $abs_home_considered_path = trim(str_replace($abs_home_url_obj->getPath(), '', $url_obj->getPath()), '/');
+                $abs_home_considered_path = trim(str_replace( $abs_home_url_obj->getPath() !== null ? $abs_home_url_obj->getPath() : '', '', $url_obj->getPath()), '/');
                 $new_url_obj->setPath(trailingslashit(trailingslashit($abs_home_url_obj->getPath()) . trailingslashit($this->get_url_slug($language)) . $abs_home_considered_path));
                 $new_url = $new_url_obj->getUri();
 
                 trp_bulk_debug($debug, array('url' => $url, 'new url' => $new_url, 'lang' => $language, 'url type' => 'custom url without language parameter'));
             } else {
                 // these have language param in them and we need to replace them with the new language
-                $abs_home_considered_path = trim(str_replace($abs_home_url_obj->getPath(), '', $url_obj->getPath()), '/');
+                $abs_home_considered_path = trim(str_replace($abs_home_url_obj->getPath() !== null ? $abs_home_url_obj->getPath() : '', '', $url_obj->getPath()), '/');
                 $no_lang_orig_path = explode('/', $abs_home_considered_path);
                 unset($no_lang_orig_path[0]);
                 $no_lang_orig_path = implode('/', $no_lang_orig_path);
@@ -783,13 +796,15 @@ class TRP_Url_Converter {
             $abs_home = '';
         }
 
-        $home_path = trim( parse_url( $abs_home, PHP_URL_PATH ), '/' );
+        $abs_home_path_url = parse_url($abs_home, PHP_URL_PATH);
+        $home_path = ($abs_home_path_url !== null )? trim($abs_home_path_url, '/') : '';
+
         $home_path_regex = sprintf( '|^%s|i', preg_quote( $home_path, '|' ) );
 
         // Trim path info from the end and the leading home path from the front.
-        $req_uri = ltrim($req_uri, '/');
+        $req_uri = ltrim( $req_uri, '/' );
         $req_uri = preg_replace( $home_path_regex, '', $req_uri );
-        $req_uri = trim($abs_home, '/') . '/' . ltrim( $req_uri, '/' );
+        $req_uri = trim( $abs_home, '/' ) . '/' . ltrim( $req_uri, '/' );
 
 
         if ( function_exists('apply_filters') ) $req_uri = apply_filters('trp_curpageurl', $req_uri);
@@ -925,7 +940,6 @@ class TRP_Url_Converter {
                 }
             }
         }
-
         return $value;
     }
 

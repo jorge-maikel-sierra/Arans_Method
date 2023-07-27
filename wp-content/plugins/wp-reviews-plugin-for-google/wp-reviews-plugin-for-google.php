@@ -9,7 +9,7 @@ Author: Trustindex.io <support@trustindex.io>
 Author URI: https://www.trustindex.io/
 Contributors: trustindex
 License: GPLv2 or later
-Version: 9.8
+Version: 10.4.1
 Text Domain: wp-reviews-plugin-for-google
 Domain Path: /languages/
 Donate link: https://www.trustindex.io/prices/
@@ -19,7 +19,7 @@ Copyright 2019 Trustindex Kft (email: support@trustindex.io)
 */
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 require_once plugin_dir_path( __FILE__ ) . 'trustindex-plugin.class.php';
-$trustindex_pm_google = new TrustindexPlugin_google("google", __FILE__, "9.8", "Widgets for Google Reviews", "Google");
+$trustindex_pm_google = new TrustindexPlugin_google("google", __FILE__, "10.4.1", "Widgets for Google Reviews", "Google");
 register_activation_hook(__FILE__, array($trustindex_pm_google, 'activate'));
 register_deactivation_hook(__FILE__, array($trustindex_pm_google, 'deactivate'));
 add_action('admin_menu', array($trustindex_pm_google, 'add_setting_menu'), 10);
@@ -37,7 +37,7 @@ global $trustindex_pm_google;
 if(!isset($trustindex_pm_google) || is_null($trustindex_pm_google))
 {
 require_once plugin_dir_path( __FILE__ ) . 'trustindex-plugin.class.php';
-$trustindex_pm_google = new TrustindexPlugin_google("google", __FILE__, "9.8", "Widgets for Google Reviews", "Google");
+$trustindex_pm_google = new TrustindexPlugin_google("google", __FILE__, "10.4.1", "Widgets for Google Reviews", "Google");
 }
 $path = wp_upload_dir()['baseurl'] .'/'. $trustindex_pm_google->getCssFile(true);
 if(is_ssl())
@@ -47,6 +47,23 @@ $path = str_replace('http://', 'https://', $path);
 wp_register_style('ti-widget-css-google', $path, [], filemtime($trustindex_pm_google->getCssFile()));
 });
 }
+if (!function_exists("ti_exclude_js"))
+{
+function ti_exclude_js($list) {
+$list[] = 'trustindex.io';
+return $list;
+}
+}
+add_filter('rocket_exclude_js', 'ti_exclude_js');
+add_filter('litespeed_optimize_js_excludes', 'ti_exclude_js');
+if (!function_exists("ti_exclude_inline_js"))
+{
+function ti_exclude_inline_js($list) {
+$list[] = 'Trustindex.init_pager';
+return $list;
+}
+}
+add_filter('rocket_excluded_inline_js_content', 'ti_exclude_inline_js');
 add_action('init', array($trustindex_pm_google, 'init_shortcode'));
 add_filter('script_loader_tag', function($tag, $handle) {
 if(strpos($tag, 'trustindex.io/loader.js') !== false && strpos($tag, 'defer async') === false) {
@@ -76,7 +93,7 @@ if($usage_time > time())
 return;
 }
 ?>
-<div class="notice notice-warning is-dismissible trustindex-popup" style="position: fixed; top: 50px; right: 20px; padding-right: 30px; z-index: 1">
+<div class="notice notice-warning is-dismissible trustindex-popup" style="position: fixed; top: 50px; right: 20px; padding-right: 30px; z-index: 1; width: auto">
 <p>
 <?php echo TrustindexPlugin_google::___("Hello, I am happy to see that you've been using our <strong>%s</strong> plugin for a while now!", ["Widgets for Google Reviews"]); ?><br>
 <?php echo TrustindexPlugin_google::___("Could you please help us and give it a 5-star rating on WordPress?"); ?><br><br>
@@ -84,13 +101,13 @@ return;
 </p>
 <p>
 <a href="<?php echo admin_url("admin.php?page=wp-reviews-plugin-for-google/settings.php&rate_us=open"); ?>" class="trustindex-rateus" style="text-decoration: none" target="_blank">
-<button class="button button-primary"><?php echo TrustindexPlugin_google::___("Sure, you deserve it"); ?></button>
+<button class="button ti-button-primary button-primary"><?php echo TrustindexPlugin_google::___("Sure, you deserve it"); ?></button>
 </a>
 <a href="<?php echo admin_url("admin.php?page=wp-reviews-plugin-for-google/settings.php&rate_us=later"); ?>" class="trustindex-rateus" style="text-decoration: none">
-<button class="button button-secondary"><?php echo TrustindexPlugin_google::___("Maybe later"); ?></button>
+<button class="button ti-button-default button-secondary"><?php echo TrustindexPlugin_google::___("Maybe later"); ?></button>
 </a>
 <a href="<?php echo admin_url("admin.php?page=wp-reviews-plugin-for-google/settings.php&rate_us=hide"); ?>" class="trustindex-rateus" style="text-decoration: none">
-<button class="button button-secondary" style="float: right"><?php echo TrustindexPlugin_google::___("Do not remind me again"); ?></button>
+<button class="button ti-button-default button-secondary" style="float: right"><?php echo TrustindexPlugin_google::___("Do not remind me again"); ?></button>
 </a>
 </p>
 </div>
@@ -131,34 +148,38 @@ add_action('wp_ajax_'. $trustindex_pm_google->get_webhook_action(), $trustindex_
 function trustindex_reviews_hook_google() {
 global $trustindex_pm_google;
 global $wpdb;
-$token = isset($_REQUEST['token']) ? sanitize_text_field($_REQUEST['token']) : "";
-if(isset($_REQUEST['test']) && $token == get_option($trustindex_pm_google->get_option_name('review-download-token')))
+$token = isset($_POST['token']) ? sanitize_text_field($_POST['token']) : "";
+if(isset($_POST['test']) && $token == get_option($trustindex_pm_google->get_option_name('review-download-token')))
 {
 echo $token;
 exit;
 }
 $our_token = $trustindex_pm_google->is_review_download_in_progress();
-if(
-!$token
-|| !$trustindex_pm_google->is_noreg_linked()
-|| $our_token != $token
-) {
-global $wp_query;
-$wp_query->set_404();
-status_header(404);
-exit;
+if(!$our_token)
+{
+$our_token = get_option($trustindex_pm_google->get_option_name('review-download-token'));
+}
+try
+{
+if(!$token || $our_token != $token)
+{
+throw new Exception('Token invalid');
+}
+if(!$trustindex_pm_google->is_noreg_linked())
+{
+throw new Exception('Platform not connected');
 }
 $name = 'Unknown source';
-if(isset($_REQUEST['error']) && $_REQUEST['error'])
+if(isset($_POST['error']) && $_POST['error'])
 {
 update_option($trustindex_pm_google->get_option_name('review-download-inprogress'), 'error', false);
 }
 else
 {
-if(isset($_REQUEST['details']))
+if(isset($_POST['details']))
 {
-$trustindex_pm_google->save_details($_REQUEST['details']);
-$trustindex_pm_google->save_reviews(isset($_REQUEST['reviews']) ? $_REQUEST['reviews'] : []);
+$trustindex_pm_google->save_details($_POST['details']);
+$trustindex_pm_google->save_reviews(isset($_POST['reviews']) ? $_POST['reviews'] : []);
 }
 delete_option($trustindex_pm_google->get_option_name('review-download-inprogress'));
 delete_option($trustindex_pm_google->get_option_name('review-manual-download'));
@@ -171,12 +192,12 @@ $subject = 'Google reviews downloaded';
 $message = '
 <p>Great news!</p>
 <p><strong>Your reviews are downloaded <span style="color: red">from Google</span>!</strong></p>
-<p>Create amazing review widgets on your website. You can choose from 40 website widget layouts and 25 widget styles.</p>
+<p>Create amazing review widgets on your website. You can choose from 40 review widget layouts and 25 widget styles.</p>
 <table border="0" cellpadding="0" cellspacing="0" style="border-collapse: separate !important;border-radius: 3px;background-color: #2AA8D7;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;">
 <tbody>
 <tr>
 <td align="center" valign="middle" style="font-family: Arial;font-size: 16px;padding: 12px 20px;mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;">
-<a title="Create website widget now! »" href="'. admin_url('admin.php') .'?page='. urlencode($trustindex_pm_google->get_plugin_slug() .'/settings.php') .'&tab=setup_no_reg" target="_blank" style="font-weight: bold;letter-spacing: normal;line-height: 100%;text-align: center;text-decoration: none;color: #FFFFFF;mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;display: block;">Create website widget now! »</a>
+<a title="Create review widget now! »" href="'. admin_url('admin.php') .'?page='. urlencode($trustindex_pm_google->get_plugin_slug() .'/settings.php') .'&tab=setup_no_reg" target="_blank" style="font-weight: bold;letter-spacing: normal;line-height: 100%;text-align: center;text-decoration: none;color: #FFFFFF;mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;display: block;">Create review widget now! »</a>
 </td>
 </tr>
 </tbody>
@@ -187,6 +208,10 @@ wp_mail(get_option('admin_email'), $subject, $message, $headers, [ '' ]);
 }
 catch(Exception $e) { }
 echo $our_token;
+}
+catch(Exception $e) {
+echo 'Error in WP: '. $e->getMessage();
+}
 exit;
 }
 add_action('admin_notices', function() {
@@ -202,7 +227,7 @@ return;
 </p>
 <p>
 <a href="<?php echo admin_url("admin.php?page=wp-reviews-plugin-for-google/settings.php&review_download_notification"); ?>" style="text-decoration: none">
-<button class="button button-primary"><?php echo TrustindexPlugin_google::___("Create website widget now! »"); ?></button>
+<button class="button button-primary"><?php echo TrustindexPlugin_google::___("Create review widget now! »"); ?></button>
 </a>
 </p>
 </div>

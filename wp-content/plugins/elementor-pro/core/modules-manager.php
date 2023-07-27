@@ -64,6 +64,8 @@ final class Modules_Manager {
 			'video-playlist',
 			'payments',
 			'progress-tracker',
+			'mega-menu',
+			'nested-carousel',
 		];
 
 		foreach ( $modules as $module_name ) {

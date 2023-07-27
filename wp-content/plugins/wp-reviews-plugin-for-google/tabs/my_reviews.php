@@ -2,7 +2,6 @@
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 if(isset($_POST['save-highlight']))
 {
-check_admin_referer( 'save-noreg_'.$trustindex_pm_google->get_plugin_slug(), '_wpnonce_highlight_save' );
 $id = null;
 $start = null;
 $length = null;
@@ -29,6 +28,31 @@ $wpdb->query("UPDATE `". $trustindex_pm_google->get_tablename('reviews') ."` SET
 }
 exit;
 }
+/* Replied flag saving:
+- Google: comes after source connect
+- Facebook: we saved internal
+- other: dont save anything & only show "Reply with ChatGPT" button
+*/
+if(isset($_POST['save-reply']))
+{
+$id = null;
+$reply = null;
+if(isset($_POST['id']))
+{
+$id = intval(sanitize_text_field($_POST['id']));
+}
+$reply = wp_kses_post(stripslashes($_POST['save-reply']));
+if($id && $reply)
+{
+$wpdb->query("UPDATE `". $trustindex_pm_google->get_tablename('reviews') ."` SET reply = '". str_replace("'", "\'", $reply) ."' WHERE id = '$id'");
+}
+exit;
+}
+if(isset($_POST['save-reply-generated']))
+{
+update_option($trustindex_pm_google->get_option_name('reply-generated'), 1, false);
+exit;
+}
 if(isset($_POST['review_download_request']))
 {
 delete_option($trustindex_pm_google->get_option_name('review-download-token'));
@@ -38,10 +62,16 @@ if(isset($_POST['review_download_request_id']))
 {
 update_option($trustindex_pm_google->get_option_name('review-download-request-id'), sanitize_text_field($_POST['review_download_request_id']), false);
 }
+update_option($trustindex_pm_google->get_option_name('review-download-modal'), 0, false);
 exit;
 }
 if(isset($_POST['review_download_timestamp']))
 {
+$page_details = isset($_POST['page_details']) ? json_decode(stripcslashes($_POST['page_details']), true) : null;
+if(isset($page_details['reviews']) && is_array($page_details['reviews']))
+{
+$trustindex_pm_google->save_reviews($page_details['reviews']);
+}
 update_option($trustindex_pm_google->get_option_name('download-timestamp'), intval($_POST['review_download_timestamp']), false);
 exit;
 }
@@ -99,6 +129,7 @@ jQuery(".ti-review-content").TI_shorten({
 jQuery(".ti-review-content").TI_format();
 ');
 $download_timestamp = get_option($trustindex_pm_google->get_option_name('download-timestamp'), time() - 1);
+$page_details = get_option($trustindex_pm_google->get_option_name('page-details'));
 ?>
 <?php if(!$trustindex_pm_google->is_noreg_linked()): ?>
 <div class="ti-notice notice-warning" style="margin-left: 0">
@@ -113,12 +144,12 @@ $download_timestamp = get_option($trustindex_pm_google->get_option_name('downloa
 </div>
 <?php endif; ?>
 <div class="ti-box">
-<div class="ti-header"><?php echo TrustindexPlugin_google::___("My Reviews"); ?></div>
+<div class="ti-box-header"><?php echo TrustindexPlugin_google::___("My Reviews"); ?></div>
 <?php if(!$is_review_download_in_progress): ?>
 <div class="tablenav top" style="margin-bottom: 26px">
 <div class="alignleft actions">
 <?php if($download_timestamp < time()): ?>
-<a href="?page=<?php echo esc_attr($_GET['page']); ?>&tab=setup_no_reg&refresh&my_reviews" class="btn-text btn-refresh btn-download-reviews" style="margin-left: 0" data-loading-text="<?php echo TrustindexPlugin_google::___("Loading") ;?>" data-delay=10><?php echo TrustindexPlugin_google::___("Download new reviews") ;?></a>
+<a href="#" class="btn-text btn-refresh btn-download-reviews" style="margin-left: 0" data-delay=10><?php echo TrustindexPlugin_google::___("Download new reviews") ;?></a>
 <?php else: ?>
 <a href="#" class="btn-text btn-disabled" style="margin-left: 0; pointer-events: none"> <?php echo TrustindexPlugin_google::___("Download new reviews"); ?></a>
 <div class="ti-notice notice-warning" style="margin: 0 0 15px 0">
@@ -137,7 +168,7 @@ $download_timestamp = get_option($trustindex_pm_google->get_option_name('downloa
 <input type="hidden" id="ti-noreg-page-id" value="<?php echo esc_attr($page_details['id']); ?>" />
 <input type="hidden" id="ti-noreg-webhook-url" value="<?php echo $trustindex_pm_google->get_webhook_url(); ?>" />
 <input type="hidden" id="ti-noreg-email" value="<?php echo get_option('admin_email'); ?>" />
-<input type="hidden" id="ti-noreg-version" value="9.8" />
+<input type="hidden" id="ti-noreg-version" value="10.4.1" />
 <?php if(isset($page_details['access_token'])): ?>
 <input type="hidden" id="ti-noreg-access-token" value="<?php echo esc_attr($page_details['access_token']); ?>" />
 <?php endif; ?>
@@ -154,7 +185,7 @@ update_option($trustindex_pm_google->get_option_name('review-download-token'), $
 <?php if(!$trustindex_pm_google->is_trustindex_connected() && $download_timestamp < time()): ?>
 <div class="ti-notice notice-error" style="margin: 0 0 15px 0">
 <p>
-<?php echo TrustindexPlugin_google::___("Don't want to waste your time by updating your reviews every week? <a href='%s' target='_blank'>Create a free Trustindex account! »</a>", [ 'https://www.trustindex.io/ti-redirect.php?a=sys&c=wp-google-l' ]); ?>
+<?php echo TrustindexPlugin_google::___("Do not waste your time by updating manually!"); ?> <?php echo TrustindexPlugin_google::___("We will solve it for you, for less than the price of a slice of pepperoni pizza per month!"); ?> <a href="https://www.trustindex.io/ti-redirect.php?a=sys&c=wp-google-pizza"><?php echo TrustindexPlugin_google::___("Subscribe!"); ?> »</a>
 </p>
 </div>
 <?php endif; ?>
@@ -177,7 +208,7 @@ update_option($trustindex_pm_google->get_option_name('review-download-token'), $
 <?php endif; ?>
 <?php if($trustindex_pm_google->is_review_manual_download()): ?>
 <br />
-<a href="#" id="review-manual-download" class="button button-primary ti-tooltip" style="margin-top: 10px" data-loading-text="<?php echo TrustindexPlugin_google::___("Loading") ;?>">
+<a href="#" id="review-manual-download" class="button button-primary ti-tooltip" style="margin-top: 10px">
 <?php echo TrustindexPlugin_google::___("Manual download") ;?>
 <span class="ti-tooltip-message">
 <?php echo TrustindexPlugin_google::___('Your reviews are downloading in the background.'); ?>
@@ -203,12 +234,13 @@ update_option($trustindex_pm_google->get_option_name('review-download-token'), $
 <th class="text-center"><?php echo TrustindexPlugin_google::___("Reviewer"); ?></th>
 <th class="text-center" style="width: 90px;"><?php echo TrustindexPlugin_google::___("Rating"); ?></th>
 <th class="text-center"><?php echo TrustindexPlugin_google::___("Date"); ?></th>
-<th style="width: 48%"><?php echo TrustindexPlugin_google::___("Text"); ?></th>
-<th></th>
+<th style="width: 50%"><?php echo TrustindexPlugin_google::___("Text"); ?></th>
+<!-- <th style="width: 150px"></th> -->
 </tr>
 </thead>
 <tbody>
 <?php foreach ($reviews as $review): ?>
+<?php $review_text = $trustindex_pm_google->getReviewHtml($review); ?>
 <tr data-id="<?php echo esc_attr($review->id); ?>">
 <td class="text-center">
 <img src="<?php echo esc_url($review->user_photo); ?>" class="ti-user-avatar" /><br />
@@ -216,9 +248,126 @@ update_option($trustindex_pm_google->get_option_name('review-download-token'), $
 </td>
 <td class="text-center source-<?php echo ucfirst("google") ?>"><?php echo trustindex_plugin_write_rating_stars($review->rating); ?></td>
 <td class="text-center"><?php echo esc_html($review->date); ?></td>
-<td><div class="ti-review-content"><?php echo $trustindex_pm_google->getReviewHtml($review); ?></div></td>
 <td>
-<a href="<?php echo esc_attr($review->id); ?>" class="btn-text btn-highlight<?php if(isset($review->highlight) && $review->highlight): ?> has-highlight<?php endif; ?>" style="margin-left: 0"><?php echo TrustindexPlugin_google::___("Highlight text") ;?></a>
+<div class="ti-review-content"><?php echo $review_text; ?></div>
+<?php
+$state = 'reply';
+if($review->reply)
+{
+$state = 'replied';
+}
+else if(!in_array('google', [ 'facebook', 'google' ]))
+{
+$state = 'copy-reply';
+}
+$hide_reply_button = false;
+if(in_array('google', [ 'facebook', 'google' ]))
+{
+$hide_reply_button = $is_review_download_in_progress || get_option($trustindex_pm_google->get_option_name('review-download-modal'), 1);
+}
+?>
+<?php if(!$hide_reply_button): ?>
+<?php if($review->reply): ?>
+<a href="#" class="btn-text btn-default btn-default-disabled btn-sm btn-show-ai-reply"><?php echo TrustindexPlugin_google::___('Reply'); ?></a>
+<?php else: ?>
+<a href="#" class="btn-text btn-sm btn-show-ai-reply" data-edit-reply-text="<?php echo TrustindexPlugin_google::___('Reply'); ?>"><?php echo TrustindexPlugin_google::___('Reply with ChatGPT'); ?></a>
+<?php endif; ?>
+<?php endif; ?>
+<?php if($review->text): ?>
+<a href="<?php echo esc_attr($review->id); ?>" class="btn-text btn-sm btn-default btn-show-highlight<?php if(isset($review->highlight) && $review->highlight): ?> has-highlight<?php endif; ?>"><?php echo TrustindexPlugin_google::___("Highlight text") ;?></a>
+<?php endif; ?>
+<?php if(!$hide_reply_button): ?>
+<div class="ti-button-dropdown ti-reply-box<?php if($state == 'replied'): ?> active<?php endif; ?>" data-state="<?php echo $state; ?>" data-original-state="<?php echo $state; ?>">
+<span class="ti-button-dropdown-arrow" data-button=".btn-show-ai-reply"></span>
+<?php if($state != 'copy-reply'): ?>
+<div class="ti-reply-box-state state-reply">
+<div class="ti-button-dropdown-title">
+<strong><?php echo TrustindexPlugin_google::___('ChatGPT generated reply'); ?></strong>
+<span><?php echo TrustindexPlugin_google::___('you can modify before upload'); ?>
+</div>
+<textarea id="ti-ai-reply-<?php echo esc_attr($review->id); ?>" rows="1"></textarea>
+<a href="<?php echo esc_attr($review->id); ?>" class="btn-text btn-sm btn-post-reply"><?php echo TrustindexPlugin_google::___('Upload reply to %s', [ 'Google' ]); ?></a>
+<a href="#" class="btn-text btn-no-background btn-sm btn-hide-ai-reply"><?php echo TrustindexPlugin_google::___('Cancel'); ?></a>
+</div>
+<div class="ti-reply-box-state state-replied">
+<div class="ti-button-dropdown-title">
+<strong><?php echo TrustindexPlugin_google::___('Reply by %s', [ $page_details['name'] ]); ?></strong>
+</div>
+<div class="ti-alert d-none"><?php echo TrustindexPlugin_google::___('Reply successfully uploaded.'); ?></div>
+<p><?php echo esc_html($review->reply); ?></p>
+<?php if('google' != 'facebook'): ?>
+<a href="<?php echo esc_attr($review->id); ?>" class="btn-text btn-white btn-sm btn-show-edit-reply"><?php echo TrustindexPlugin_google::___('Edit reply'); ?></a>
+<?php endif; ?>
+</div>
+<div class="ti-reply-box-state state-edit-reply">
+<div class="ti-button-dropdown-title">
+<strong><?php echo TrustindexPlugin_google::___('Edit reply'); ?></strong>
+<span><?php echo TrustindexPlugin_google::___('change your previous reply'); ?>
+</div>
+<textarea rows="1"><?php echo esc_html($review->reply); ?></textarea>
+<a href="<?php echo esc_attr($review->id); ?>" class="btn-text btn-sm btn-post-reply"><?php echo TrustindexPlugin_google::___('Upload reply to %s', [ 'Google' ]); ?></a>
+<a href="#" class="btn-text btn-no-background btn-sm btn-hide-edit-reply"><?php echo TrustindexPlugin_google::___('Cancel'); ?></a>
+</div>
+<?php endif; ?>
+<div class="ti-reply-box-state state-copy-reply">
+<div class="ti-button-dropdown-title">
+<strong><?php echo TrustindexPlugin_google::___('Copy the reply'); ?></strong>
+</div>
+<div class="ti-alert ti-alert-warning d-none">
+<?php echo TrustindexPlugin_google::___('We could not connect your account with the review.'); ?>
+<a href="#" class="btn-try-reply-again"><?php echo TrustindexPlugin_google::___('Try again'); ?></a>
+</div>
+<textarea id="ti-copy-ai-reply-<?php echo esc_attr($review->id); ?>" rows="1"></textarea>
+<a href="#ti-copy-ai-reply-<?php echo esc_attr($review->id); ?>" class="btn-text btn-sm btn-copy2clipboard ti-tooltip toggle-tooltip">
+<?php echo TrustindexPlugin_google::___("Copy to clipboard") ;?>
+<span class="ti-tooltip-message">
+<span style="color: #00ff00; margin-right: 2px">✓</span>
+<?php echo TrustindexPlugin_google::___("Copied"); ?>
+</span>
+</a>
+<a href="#" class="btn-text btn-no-background btn-sm btn-hide-ai-reply"><?php echo TrustindexPlugin_google::___('Cancel'); ?></a>
+</div>
+</div>
+<script type="application/ld+json"><?php echo json_encode([
+'source' => [
+'page_id' => $page_details['id'],
+'name' => $page_details['name'],
+'reviews' => [
+'count' => $page_details['rating_number'],
+'score' => $page_details['rating_score'],
+],
+'access_token' => isset($page_details['access_token']) ? $page_details['access_token'] : null
+],
+'review' => [
+'id' => $review->reviewId,
+'reviewer' => [
+'name' => $review->user,
+'avatar_url' => $review->user_photo
+],
+'rating' => $review->rating,
+'text' => $review->text,
+'created_at' => $review->date
+]
+]); ?></script>
+<?php endif; ?>
+<?php if($review->text): ?>
+<div class="ti-button-dropdown ti-highlight-box">
+<span class="ti-button-dropdown-arrow" data-button=".btn-show-highlight"></span>
+<div class="ti-button-dropdown-title">
+<strong><?php echo TrustindexPlugin_google::___('Highlight text'); ?></strong>
+<span><?php echo TrustindexPlugin_google::___('just select the text you want to highlight'); ?>
+</div>
+<div class="ti-highlight-content">
+<div class='raw-content'><?php echo $review_text; ?></div>
+<div class='selection-content'><?php echo preg_replace('/<mark class="ti-highlight">/', '', $review_text); ?></div>
+</div>
+<a href="<?php echo esc_attr($review->id); ?>" class="btn-text btn-sm btn-save-highlight"><?php echo TrustindexPlugin_google::___('Save'); ?></a>
+<a href="#" class="btn-text btn-no-background btn-sm btn-hide-highlight"><?php echo TrustindexPlugin_google::___('Cancel'); ?></a>
+<?php if($review->highlight): ?>
+<a href="<?php echo esc_attr($review->id); ?>" class="btn-text btn-danger btn-sm btn-remove-highlight btn-pull-right"><?php echo TrustindexPlugin_google::___('Remove highlight'); ?></a>
+<?php endif; ?>
+</div>
+<?php endif; ?>
 </td>
 </tr>
 <?php endforeach; ?>
@@ -226,29 +375,29 @@ update_option($trustindex_pm_google->get_option_name('review-download-token'), $
 </table>
 <?php endif; ?>
 </div>
-<!-- Modal -->
-<div class="ti-modal" id="ti-highlight-modal">
-<?php wp_nonce_field( 'save-noreg_'.$trustindex_pm_google->get_plugin_slug(), '_wpnonce_highlight_save' ); ?>
+<?php if($reviews && get_option($trustindex_pm_google->get_option_name('review-download-modal'), 1) && in_array('google', [ 'facebook', 'google' ])): ?>
+<div class="ti-modal ti-rateus-modal" style="display: block">
 <div class="ti-modal-dialog">
 <div class="ti-modal-content">
-<div class="ti-modal-header">
-<span class="ti-modal-title"><?php echo TrustindexPlugin_google::___("Highlight text") ;?></span>
-</div>
+<span class="ti-close-icon btn-modal-close"></span>
 <div class="ti-modal-body">
-<?php echo TrustindexPlugin_google::___("Just select the text you want to highlight") ;?>:
-<div class="ti-highlight-content"></div>
+<div class="ti-rateus-title"><?php echo TrustindexPlugin_google::___('New feature: %s', [ TrustindexPlugin_google::___('Reply with ChatGPT') ]); ?></div>
+<p>
+<?php echo TrustindexPlugin_google::___('In order to use this feature, your reviews need to be updated.'); ?><br />
+<?php echo TrustindexPlugin_google::___('This could take a little while, so please refresh the page after 3 minutes!'); ?>
+</p>
 </div>
 <div class="ti-modal-footer">
-<a href="#" class="btn-text btn-modal-close"><?php echo TrustindexPlugin_google::___("Back") ;?></a>
-<a href="#" class="btn-text btn-primary btn-highlight-confirm" data-loading-text="<?php echo TrustindexPlugin_google::___("Loading") ;?>"><?php echo TrustindexPlugin_google::___("Save") ;?></a>
-<a href="#" class="btn-text btn-danger btn-highlight-remove" style="position: absolute; left: 15px" data-loading-text="<?php echo TrustindexPlugin_google::___("Loading") ;?>"><?php echo TrustindexPlugin_google::___("Remove highlight") ;?></a>
+<a href="#" class="btn-text btn-default btn-modal-close"><?php echo TrustindexPlugin_google::___('Cancel') ;?></a>
+<a href="#" class="btn-text btn-refresh btn-download-reviews"><?php echo TrustindexPlugin_google::___('Update') ;?></a>
 </div>
 </div>
 </div>
 </div>
+<?php endif; ?>
 <?php if(class_exists('Woocommerce')): ?>
 <div class="ti-box">
-<div class="ti-header"><?php echo TrustindexPlugin_google::___('Collect reviews automatically for your WooCommerce shop'); ?></div>
+<div class="ti-box-header"><?php echo TrustindexPlugin_google::___('Collect reviews automatically for your WooCommerce shop'); ?></div>
 <?php if(!class_exists('TrustindexCollectorPlugin')): ?>
 <p><?php echo TrustindexPlugin_google::___("Download our new <a href='%s' target='_blank'>%s</a> plugin and get features for free!", [ 'https://wordpress.org/plugins/customer-reviews-collector-for-woocommerce/', TrustindexPlugin_google::___('Customer Reviews Collector for WooCommerce') ]); ?></p>
 <?php endif; ?>
