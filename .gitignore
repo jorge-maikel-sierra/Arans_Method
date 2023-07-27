@@ -48,3 +48,4 @@ wp-config.ddev.php
 # uncomment the next line
 #/wp-content/themes
 
+.ddev 
