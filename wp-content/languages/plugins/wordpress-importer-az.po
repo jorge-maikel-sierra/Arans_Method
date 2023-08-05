@@ -1,0 +1,173 @@
+# Translation of Plugins - WordPress Importer - Stable (latest release) in Azerbaijani
+# This file is distributed under the same license as the Plugins - WordPress Importer - Stable (latest release) package.
+msgid ""
+msgstr ""
+"PO-Revision-Date: 2016-05-03 16:51:03+0000\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+"X-Generator: GlotPress/4.0.0-alpha.4\n"
+"Language: az\n"
+"Project-Id-Version: Plugins - WordPress Importer - Stable (latest release)\n"
+
+#. Author of the plugin
+msgid "wordpressdotorg"
+msgstr "wordpressdotorg"
+
+#: class-wp-import.php:261
+msgid "Submit"
+msgstr "Təsdiqlə"
+
+#: class-wp-import.php:1335
+msgid "Choose a WXR (.xml) file to upload, then click Upload file and import."
+msgstr "Bir WXR (.xml) faylı seçin, yüklə düyməsinə basın ki, idxal başlasın."
+
+#: class-wp-import.php:1132
+msgid "Zero size file downloaded"
+msgstr "Sıfır həcmli fayl yükləndi"
+
+#: class-wp-import.php:213
+msgid "Failed to import author %s. Their posts will be attributed to the current user."
+msgstr "%s müəllifini idxal etmə baş tutmadı. Yazıları hazırkı istifadəçiyə yönləndiriləcək."
+
+#: class-wp-import.php:432
+msgid "Failed to import category %s"
+msgstr "%s kateqoriyasının idxalı baş tutmadı"
+
+#: class-wp-import.php:483
+msgid "Failed to import post tag %s"
+msgstr "%s yazı etiketinin idxalı baş tutmadı"
+
+#: class-wp-import.php:939
+msgid "Menu item skipped due to missing menu slug"
+msgstr "Menyu qısa ismi olmadığı üçün menyu elementi vaz keçildi"
+
+#: class-wp-import.php:303
+msgid "assign posts to an existing user:"
+msgstr "yazıları mövcud olan bir istifadəçiyə təyin et:"
+
+#: class-wp-import.php:293
+msgid "as a new user:"
+msgstr "yeni bir istifadəçi olaraq:"
+
+#: class-wp-import.php:188
+msgid "This WXR file (version %s) may not be supported by this version of the importer. Please consider updating."
+msgstr "WXR faylı (versiya %s) idxalçının bu versiyası ilə uyğun deyil. Lütfən yenilənmə edin."
+
+#: class-wp-import.php:244
+msgid "If a new user is created by WordPress, a new password will be randomly generated and the new user&#8217;s role will be set as %s. Manually changing the new user&#8217;s details will be necessary."
+msgstr "Əgər WordPress tərəfindən yeni bir istifadəçi yaradılırsa, təsadüfi bir parol yaradılacaq və yeni istifadəçiyə %s rolu təyin ediləcək. Lazım olarsa yeni istifadəçinin məlumatlarını özünüz dəyişdirə bilərsiniz."
+
+#: class-wp-import.php:946
+msgid "Menu item skipped due to invalid menu slug: %s"
+msgstr "Keçərsiz qısa isim səbəbi ilə menyu elementi vaz keçildi: %s"
+
+#: class-wp-import.php:1013
+msgid "Fetching attachments is not enabled"
+msgstr "Əlavələri idxal etmə aktiv deyil"
+
+#: class-wp-import.php:152
+msgid "Remember to update the passwords and roles of imported users."
+msgstr "İdxal edilən istifadəçilərin rollarını və parollarını yeniləməyi unutmayın."
+
+#: class-wp-import.php:108
+msgid "The file does not exist, please try again."
+msgstr "Fayl tapılmadı, təkrar yoxlayın."
+
+#: parsers/class-wxr-parser-regex.php:102
+#: parsers/class-wxr-parser-simplexml.php:46
+#: parsers/class-wxr-parser-simplexml.php:52
+#: parsers/class-wxr-parser-xml.php:107
+msgid "This does not appear to be a WXR file, missing/invalid WXR version number"
+msgstr "Bu fayl WXR faylı deyil, WXR nömrəsiı əksik/xətalı"
+
+#: parsers/class-wxr-parser.php:46
+msgid "Details are shown above. The importer will now try again with a different parser..."
+msgstr "Detallar aşağıda göstərilmişdir. İdxalçıı başqa bir üsulla təkrar oxlayacaq..."
+
+#. Description of the plugin
+msgid "Import posts, pages, comments, custom fields, categories, tags and more from a WordPress export file."
+msgstr "Bir WordPress idxal faylından yazıları, səhifələri, şərhləri, özəl sahələri, kateqoriyaları, etiketləri və daha çoxunu idxal edin."
+
+#: class-wp-import.php:1319
+msgid "A new version of this importer is available. Please update to version %s to ensure compatibility with newer export files."
+msgstr "Bu idxalçının yeni bir versiyası mövcuddur. Lütfən yeni idxal faylları ilə uyğunlaşması üçün %s versiyasına yüksəldin."
+
+#: parsers/class-wxr-parser-simplexml.php:33
+#: parsers/class-wxr-parser-simplexml.php:41 parsers/class-wxr-parser.php:45
+msgid "There was an error when reading this WXR file"
+msgstr "WXR faylı oxunarkən xəta baş verdi"
+
+#: class-wp-import.php:290
+msgid "or create new user with login name:"
+msgstr "ya da yeni bir istifadəçi yaradın:"
+
+#: class-wp-import.php:373
+msgid "Failed to create new user for %s. Their posts will be attributed to the current user."
+msgstr "%s üçün yeni istifadəçi yaratmaq baş tutmadı. Yazıları mövcud istifadəçiyə yönləndiriləcək."
+
+#: class-wp-import.php:305
+msgid "or assign posts to an existing user:"
+msgstr "ya mövcud olan bir istifadəçi seçin:"
+
+#: class-wp-import.php:257
+msgid "Download and import file attachments"
+msgstr "Fayl əlavələrini yüklə və daxil et"
+
+#: class-wp-import.php:314
+msgid "- Select -"
+msgstr "- Seç -"
+
+#: class-wp-import.php:1312
+msgid "Import WordPress"
+msgstr "WordPress-i idxal et"
+
+#: class-wp-import.php:241
+msgid "Assign Authors"
+msgstr "Müəllif Təyin Edin"
+
+#: class-wp-import.php:1334
+msgid "Howdy! Upload your WordPress eXtended RSS (WXR) file and we&#8217;ll import the posts, pages, comments, custom fields, categories, and tags into this site."
+msgstr "Salam! WordPress eXtended RSS (WXR) faylını yükləyin, sonra yazıları, səhifələri, şərhləri, özəl sahələri, kateqoriyaları və etiketləri bu sayta idxal edəcəyik."
+
+#: class-wp-import.php:1143
+msgid "Remote file is too large, limit is %s"
+msgstr "Uzaq fayl çox böyükdür, limit %s"
+
+#: class-wp-import.php:151
+msgid "All done."
+msgstr "Hamısı tamamlandı."
+
+#: class-wp-import.php:151
+msgid "Have fun!"
+msgstr "Xoş əyləncələr!"
+
+#: class-wp-import.php:1031
+msgid "Invalid file type"
+msgstr "Xətalı fayl növü"
+
+#: class-wp-import.php:275
+msgid "Import author:"
+msgstr "Müəllifi idxal et:"
+
+#: class-wp-import.php:254
+msgid "Import Attachments"
+msgstr "Əlavəli faylları idxal et"
+
+#: class-wp-import.php:1125
+msgid "Remote server did not respond"
+msgstr "Uzaq server cavab vermədi"
+
+#: wordpress-importer.php:63
+msgid "Import <strong>posts, pages, comments, custom fields, categories, and tags</strong> from a WordPress export file."
+msgstr "Bir WordPress idxal faylından <strong>yazıları, səhifələri, şərhləri, özəl sahələri, kateqoriyaları və etiketləri</strong> idxal edin."
+
+#: class-wp-import.php:107 class-wp-import.php:116 class-wp-import.php:167
+#: class-wp-import.php:171 class-wp-import.php:180
+msgid "Sorry, there has been an error."
+msgstr "Bağışlayın, bir xəta baş verdi."
+
+#. Plugin Name of the plugin
+msgid "WordPress Importer"
+msgstr "WordPress İmportçu"
